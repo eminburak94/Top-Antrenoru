@@ -405,6 +405,8 @@ class Match:
             foreigners = sum(not is_domestic(player(self.s,key)) for _, key in slots if key != outid)
             if foreigners + (not is_domestic(incoming)) > self.s['cap']:
                 return False
+            if isinstance(self.pitch, CalibratedPitch) and not self.pitch.settle_substitution(side, outid):
+                return False
             slots[index] = (role, inid)
             self.used.add(inid)
             self.team_subs[side]+=1

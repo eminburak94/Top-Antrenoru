@@ -44,6 +44,17 @@ class CalibratedPitch(RulesPitch):
         if offender in self.anchor[side]:
             super().card(side, offender, level)
 
+    def settle_substitution(self, side, outgoing):
+        # Show a deferred caution before a substitution can remove its recipient.
+        due = [(team, pid, level) for team, pid, level in self.pending_cards
+               if (team, pid) == (side, outgoing)]
+        if not due:
+            return True
+        self.pending_cards = [item for item in self.pending_cards if item[:2] != (side, outgoing)]
+        for team, pid, level in due:
+            self.card(team, pid, level)
+        return any(pid == outgoing for _, pid in self.m.slots[side])
+
     def boundary(self, origin, destination, last_side, last_player):
         point = touchline_crossing(origin, destination)
         if point is None:
