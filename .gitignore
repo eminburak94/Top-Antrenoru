@@ -1,0 +1,72 @@
+# Personal careers and local data
+[Ss]aves/
+[Kk]ayitlar/
+[Kk]ayıtlar/
+user_data/
+userdata/
+LocalAppData/
+*.sav
+*.save
+*.bak
+*autosave*.json
+*career_save*.json
+*kariyer*.json
+
+# Local packaging, binaries and vendor archives
+.build/
+.alfa_build/
+build/
+dist/
+*TESTER ALFA/
+*TESTER BETA/
+yedek_v*/
+*.exe
+*.dll
+*.pyd
+*.msi
+*.zip
+*.rar
+*.7z
+*.dat
+
+# Python and editor caches
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.idea/
+.vscode/
+
+# Credentials and private configuration
+.env
+.env.*
+*.pem
+*.key
+*.pfx
+*.p12
+*.kdbx
+*credentials*.json
+*secrets*.json
+*token*.json
+.netrc
+.git-credentials
+
+# Generated diagnostics and temporary files
+*.tmp
+*.log
+*.swp
+*.spec
+V*_EKRANLAR/
+V*_KARIYER*.csv
+KARIYER_*_V*.csv
+CA_PA_V*.csv
+KULUP_EKONOMI_V*.csv
+V*_MAC_KALIBRASYONU.json
+V*_KALECI_TAKIM_HAM.json
+V*_PERFORMANS_HAM.json
+V*_GENC_EMEKLILIK.json
+V*_KAYNAK_SHA256.txt

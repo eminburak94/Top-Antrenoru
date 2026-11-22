@@ -1,0 +1,3 @@
+# Kulüp değiştirme testleri
+
+Galatasaray'dan Erzurumspor'a, ardından Fenerbahçe'ye iki sezon içi geçiş doğrulandı. Her kabulün hemen öncesi ve sonrasında fikstür, sonuçlar, puan tablosu, finans, transfer geçmişi, oyuncu sahipliği, personel durumu ve RNG aynı kaldı. Yeni görevde kişisel maç sayısı sıfırdan başladı. Üç görev döneminde kişisel maç sayıları 1, 1 ve 0 olarak ayrıldı. İkinci geçiş sonrasında kayıt gidiş dönüşü menajer geçmişini, fikstürü, personeli ve RNG durumunu korudu. Aynı teklifi ikinci kez kabul etme denemesi reddedildi. İstifa ve mali nedenle görevden alma görev geçmişine ayrı nedenlerle işlendi.

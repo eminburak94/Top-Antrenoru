@@ -1,0 +1,11 @@
+# Premier League 2000/01 fizibilitesi
+
+Karar: v0.8.7'de oynanabilir Premier League yok. Kulüp kimlikleri ve formatı doğrulandı. Sezon başı tescilli oyuncu listeleri, doğum, mevki ve transfer tarihlerini birlikte kapsayan dağıtıma uygun bir veri seti doğrulanamadı.
+
+20 kulüp: Arsenal, Aston Villa, Bradford City, Charlton Athletic, Chelsea, Coventry City, Derby County, Everton, Ipswich Town, Leeds United, Leicester City, Liverpool, Manchester City, Manchester United, Middlesbrough, Newcastle United, Southampton, Sunderland, Tottenham Hotspur, West Ham United. Her biri için resmî sezon kimliği doğrulandı, doğrulanmış ve paketlenebilir tam başlangıç kadrosu kapsamı bilinmiyor. 20/20 kimlik, 0/20 tam kadro için yayın kapısı geçildi. Bu 0 sayısı tekil oyuncu veya maç kadrosu yok demek değildir.
+
+38 maç/kulüp, 380 toplam ve galibiyet için 3 puan. Başlangıç ve son hafta örnekleri 19 Ağustos 2000 ve 19 Mayıs 2001. Manchester City, Coventry City ve Bradford City düştü. Yükselme için alt lig tablosu ve play-off kuralı oyun modeline bağlanmalı. Tarihsel Avrupa katılımcıları UEFA arşivinden doğrulanabilir, alternatif gelecek yılların katılımı ayrıca yarışma modeli gerektirir. [Premier League sezon özeti](https://www.premierleague.com/en/news/59013), [resmî sezon tablosu](https://resources.premierleague.pulselive.com/premierleague/document/2025/10/22/c03ebde8-8b59-4822-9f3b-bd42ed587f92/PL_Handbook_25-26_07.10.pdf), [açılış maçı](https://www.premierleague.com/en/match/16134), [son gün maçı](https://www.premierleague.com/en/match/13673/southampton-vs-arsenal/stats)
+
+Çalışma izni için dönem ayrımı ve düzenli uluslararası oynama koşulu Parlamento kayıtlarında var. Tescil, istisnalar ve başvuru tarihindeki uygunluk için gerçek tarihli veri gerekir. Güncel homegrown kuralları 2000'e uygulanmadı. [Hansard, Work Permits: Football](https://hansard.parliament.uk/Commons/2007-03-23/debates/07032344000046/WorkPermitsFootball)
+
+Premier League sitesi veri tabanı ve yeniden dağıtım haklarını saklı tutuyor. Yerel CM/FM arşivleri araştırma kaynağı ve hak sahiplerinin arşivi; dağıtım hakkına ilişkin doğrulanmış yetki yok. Paket içine İngiliz kulüp kadrosu aktarılmadı. [Premier League kullanım koşulları](https://www.premierleague.com/en/terms-and-conditions)

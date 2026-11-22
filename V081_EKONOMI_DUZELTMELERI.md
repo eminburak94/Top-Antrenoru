@@ -1,0 +1,7 @@
+# Ekonomi düzeltmeleri
+
+AI, eldeki nakit ile haftalık maaş bütçesinin yanında sezon sonu tahminini ve yıllık maaş kapasitesini kontrol eder. Tahmin kalan bilet, yayın, sponsorluk ve kombine gelirlerinden futbolcu ve ekip maaşlarını, idari gideri, altyapıyı, tesis bakımını ve faizi düşer. Öngörülen oyuncu satışı veya lig ödülünü gelir saymaz. Borç servisi tahminde ayrıdır. Bonservis ve imza parası teklif anında, maaş artışı kalan hafta sayısına göre düşülür. Kredi tavanı ve gerçek anapara ödemesi önceki defter mantığıyla sürer.
+
+İdari taban 11.000 + 100 × itibar düzeyinden 6.200 + 65 × itibar düzeyine indi. Personel maaşı gerçek sözleşme bedelinden gelir. AI sekiz ara haftada ve sezon açılışında eksik rol arar. Personelsiz kulüp, ilk işe alımı karşılayacak nakit ve sezon sonu rezervi varsa işe alabilir. Uygun aday bulunmadığında en fazla 150 kurgusal adaylık havuz genişletilebilir. Negatif nakit veya sezon sonu tahminiyle karşılaşan AI, kadro derinliğini gözeterek en fazla iki yüksek maaşlı saha oyuncusunu satış listesine alabilir. Satışın gerçekleşmesi alıcıya bağlıdır.
+
+Hedefli testlerde negatif nakitten kredi çekme ve nakit toparlandığında anapara ödeme, tek maaş tahakkuku, aynı personeli ikinci kulübe kaydedememe, sezon ortası ilk işe alım ve yüksek nakde rağmen sürdürülemez maaş teklifinin engellenmesi ölçüldü. Nakit ortalamasının artışı, oyuncu harcamalarının aşırı kısıtlanması ihtimalini ölçmeyi gerektiriyor. Borç limiti dolmuş ve satış yapamayan kulüp açıkta kalabilir.

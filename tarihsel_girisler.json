@@ -1,0 +1,267 @@
+[
+  {
+    "id": "53537",
+    "name": "Selçuk İnan",
+    "dob": "1985-02-10",
+    "nation": "TR",
+    "available_from": "2000-08-15",
+    "source": "https://www.tff.org/Default.aspx?kisiID=53537&pageId=30",
+    "estimates": {
+      "position": "M",
+      "ca": 80,
+      "pa": 136
+    }
+  },
+  {
+    "id": "91384",
+    "name": "Burak Yılmaz",
+    "dob": "1985-07-15",
+    "nation": "TR",
+    "available_from": "2002-08-28",
+    "source": "https://www.tff.org/Default.aspx?kisiID=91384&pageId=30",
+    "estimates": {
+      "position": "F",
+      "ca": 90,
+      "pa": 141
+    }
+  },
+  {
+    "id": "174456",
+    "name": "Mehmet Topal",
+    "dob": "1986-03-03",
+    "nation": "TR",
+    "available_from": "2002-08-31",
+    "source": "https://www.tff.org/Default.aspx?kisiID=174456&pageId=30",
+    "estimates": {
+      "position": "M",
+      "ca": 80,
+      "pa": 135
+    }
+  },
+  {
+    "id": "664036",
+    "name": "Arda Turan",
+    "dob": "1987-01-30",
+    "nation": "TR",
+    "available_from": "2002-12-26",
+    "source": "https://www.tff.org/Default.aspx?kisiID=664036&pageId=30",
+    "estimates": {
+      "position": "M",
+      "ca": 80,
+      "pa": 149
+    }
+  },
+  {
+    "id": "433728",
+    "name": "Caner Erkin",
+    "dob": "1988-10-04",
+    "nation": "TR",
+    "available_from": "2004-11-25",
+    "source": "https://www.tff.org/Default.aspx?kisiID=433728&pageId=30",
+    "estimates": {
+      "position": "D",
+      "ca": 80,
+      "pa": 135
+    }
+  },
+  {
+    "id": "40463",
+    "name": "Gökhan Zan",
+    "dob": "1981-09-07",
+    "nation": "TR",
+    "available_from": "2000-08-10",
+    "source": "https://www.tff.org/Default.aspx?kisiId=40463&pageId=30",
+    "confidence": "primary-identity-and-registration",
+    "facts": {
+      "full_name": "Gökhan Zan",
+      "birthplace": "ANTAKYA",
+      "club_at_threshold": "Dardanelspor",
+      "threshold_kind": "documented_professional_registration",
+      "secondary_citizenship": null,
+      "height_cm": null,
+      "weight_kg": null,
+      "preferred_foot": null
+    },
+    "estimates": {
+      "position": "CB",
+      "ca": 93,
+      "pa": 132,
+      "method": "age and role based simulation estimate"
+    }
+  },
+  {
+    "id": "484274",
+    "name": "Fehmi Emre Güngör",
+    "dob": "1984-08-01",
+    "nation": "TR",
+    "available_from": "2001-08-09",
+    "source": "https://www.tff.org/Default.aspx?kisiId=484274&pageId=30",
+    "confidence": "primary-identity-and-registration",
+    "facts": {
+      "full_name": "Fehmi Emre Güngör",
+      "birthplace": "İSTANBUL",
+      "club_at_threshold": "MKE Ankaragücü",
+      "threshold_kind": "documented_professional_registration",
+      "secondary_citizenship": null,
+      "height_cm": null,
+      "weight_kg": null,
+      "preferred_foot": null
+    },
+    "estimates": {
+      "position": "CB",
+      "ca": 86,
+      "pa": 132,
+      "method": "age and role based simulation estimate"
+    }
+  },
+  {
+    "id": "414770",
+    "name": "Gökhan Gönül",
+    "dob": "1985-01-04",
+    "nation": "TR",
+    "available_from": "2002-08-09",
+    "source": "https://www.tff.org/Default.aspx?kisiId=414770&pageId=30",
+    "confidence": "primary-identity-and-registration",
+    "facts": {
+      "full_name": "Gökhan Gönül",
+      "birthplace": "BAFRA",
+      "club_at_threshold": "Gençlerbirliği",
+      "threshold_kind": "documented_professional_registration",
+      "secondary_citizenship": null,
+      "height_cm": null,
+      "weight_kg": null,
+      "preferred_foot": null
+    },
+    "estimates": {
+      "position": "RB",
+      "ca": 89,
+      "pa": 140,
+      "method": "age and role based simulation estimate"
+    }
+  },
+  {
+    "id": "56026",
+    "name": "Serkan Kırıntılı",
+    "dob": "1985-02-15",
+    "nation": "TR",
+    "available_from": "2002-08-09",
+    "source": "https://www.tff.org/Default.aspx?kisiId=56026&pageId=30",
+    "confidence": "primary-identity-and-registration",
+    "facts": {
+      "full_name": "Serkan Kırıntılı",
+      "birthplace": "KARATAŞ",
+      "club_at_threshold": "Adanaspor",
+      "threshold_kind": "documented_professional_registration",
+      "secondary_citizenship": null,
+      "height_cm": null,
+      "weight_kg": null,
+      "preferred_foot": null
+    },
+    "estimates": {
+      "position": "GK",
+      "ca": 86,
+      "pa": 130,
+      "method": "age and role based simulation estimate"
+    }
+  },
+  {
+    "id": "673538",
+    "name": "Uğur Uçar",
+    "dob": "1987-04-05",
+    "nation": "TR",
+    "available_from": "2002-12-26",
+    "source": "https://www.tff.org/Default.aspx?kisiId=673538&pageId=30",
+    "confidence": "primary-identity-and-registration",
+    "facts": {
+      "full_name": "Uğur Uçar",
+      "birthplace": "BAKIRKÖY",
+      "club_at_threshold": "Galatasaray",
+      "threshold_kind": "documented_professional_registration",
+      "secondary_citizenship": null,
+      "height_cm": null,
+      "weight_kg": null,
+      "preferred_foot": null
+    },
+    "estimates": {
+      "position": "RB",
+      "ca": 81,
+      "pa": 128,
+      "method": "age and role based simulation estimate"
+    }
+  },
+  {
+    "id": "111663",
+    "name": "Volkan Babacan",
+    "dob": "1988-08-11",
+    "nation": "TR",
+    "available_from": "2004-02-06",
+    "source": "https://www.tff.org/Default.aspx?kisiId=111663&pageId=30",
+    "confidence": "primary-identity-and-registration",
+    "facts": {
+      "full_name": "Volkan Babacan",
+      "birthplace": "ANTALYA",
+      "club_at_threshold": "Fenerbahçe",
+      "threshold_kind": "documented_professional_registration",
+      "secondary_citizenship": null,
+      "height_cm": null,
+      "weight_kg": null,
+      "preferred_foot": null
+    },
+    "estimates": {
+      "position": "GK",
+      "ca": 81,
+      "pa": 133,
+      "method": "age and role based simulation estimate"
+    }
+  },
+  {
+    "id": "424027",
+    "name": "Serdar Kurtuluş",
+    "dob": "1987-07-23",
+    "nation": "TR",
+    "available_from": "2004-08-27",
+    "source": "https://www.tff.org/Default.aspx?kisiId=424027&pageId=30",
+    "confidence": "primary-identity-and-registration",
+    "facts": {
+      "full_name": "Serdar Kurtuluş",
+      "birthplace": "BURSA",
+      "club_at_threshold": "Bursaspor",
+      "threshold_kind": "documented_professional_registration",
+      "secondary_citizenship": null,
+      "height_cm": null,
+      "weight_kg": null,
+      "preferred_foot": null
+    },
+    "estimates": {
+      "position": "RB",
+      "ca": 84,
+      "pa": 130,
+      "method": "age and role based simulation estimate"
+    }
+  },
+  {
+    "id": "1723820",
+    "name": "Arda Güler",
+    "dob": "2005-02-25",
+    "nation": "TR",
+    "available_from": "2021-01-15",
+    "source": "https://www.tff.org/Default.aspx?kisiId=1723820&pageId=30",
+    "confidence": "primary-identity-and-registration",
+    "facts": {
+      "full_name": "Arda Güler",
+      "birthplace": "ALTINDAĞ",
+      "club_at_threshold": "Fenerbahçe",
+      "threshold_kind": "documented_professional_registration",
+      "secondary_citizenship": null,
+      "height_cm": null,
+      "weight_kg": null,
+      "preferred_foot": null
+    },
+    "estimates": {
+      "position": "AM",
+      "ca": 100,
+      "pa": 149,
+      "method": "age and role based simulation estimate"
+    }
+  }
+]

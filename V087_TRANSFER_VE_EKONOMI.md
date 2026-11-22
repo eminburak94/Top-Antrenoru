@@ -1,0 +1,3 @@
+# Transfer ve ekonomi
+
+Ekonomi Model 2 ve transfer sözleşmeleri korunuyor. Model 4 saha sonuçları ve sezon disiplinini etkiler, para birimi veya finans formüllerini değiştirmez. Test senaryosunda futbolcu ve personel araması açıldı, transfer teklifinin alan mantığı çağrıldı, 34 haftalık sezon tamamlandı. Ek uçtan uca denemede gerçek Tkinter teklif formu açıldı, Teklifi ilet düğmesi basıldı ve oyuncu 27547 yeni kulübe kaydoldu. Türkiye–İngiltere pazarı lig fizibilitesi kapısına takıldığı için bu sürümde bulunmuyor. Kariyer CSV'sinde oyun kasası, borç, ücret oranı, bonservis ve kadro sonuçları var.
