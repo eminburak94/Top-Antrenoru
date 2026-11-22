@@ -28,10 +28,21 @@ def shot_probabilities(distance, angle, pressure, visibility, alignment, shooter
     return target, save
 
 
+def open_play_target(target, attack, defence):
+    """Apply a small finishing-space adjustment from the active lineups."""
+    space_quality = clamp((attack - defence) * .028, -.10, .10)
+    return clamp(target + space_quality, .12, .82)
+
+
 class CalibratedPitch(RulesPitch):
     def __init__(self, match, seed):
         super().__init__(match, seed)
         self.corner_phase = None
+
+    def card(self, side, offender, level):
+        # A deferred second caution may already have sent this player off.
+        if offender in self.anchor[side]:
+            super().card(side, offender, level)
 
     def boundary(self, origin, destination, last_side, last_player):
         point = touchline_crossing(origin, destination)
@@ -154,6 +165,8 @@ class CalibratedPitch(RulesPitch):
             target=clamp(.93+(skills['Composure']-10)*.006,.84,.99)
             save=clamp(.16+save*.16+alignment*.05,.13,.36) if keeper else 0
         else:
+            if self.set_piece is None:
+                target=open_play_target(target,m.strengths[side]['F'],m.strengths[rival]['D'])
             target*=m.energy(side)
             if side==0:target=min(.82,target*1.045)
         m.shots[side]+=1
