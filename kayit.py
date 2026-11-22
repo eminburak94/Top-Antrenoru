@@ -518,10 +518,10 @@ def save_game(s, path):
     text = encode(s)
     decode(text)
     if path.exists():
-        previous = path.read_text(encoding='utf-8-sig', errors='replace')
         try:
+            previous = path.read_text(encoding='utf-8-sig')
             decode(previous)
-        except SaveError:
+        except (SaveError, UnicodeError):
             pass
         else:
             atomic_write(backup_path(path), previous)

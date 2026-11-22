@@ -36,3 +36,11 @@ Kart denetiminde ikinci tur için 83000 bandında 34 direkt kırmızı ve 125 ik
 Model 4 iki bantta 1.247 taç verdi, 1.219 taç kullanıldı ve 4.833 faul üretti. İki izole haftada ham motor kaydı, haftalık sonuç ve kaydet/yükle sonrası günlük aynıydı. 18 maçta 24 taç kararı, 23 kullanılan taç ve 102 faul korunmuştu. Bu örneklemde düşük sıklık depolama kaybından kaynaklanmıyor. Verilen ve kullanılan taç arasındaki farkın tamamı için ayrı sonlandırma nedeni izlemesi yapılmadı. İhraç hacmi ve düşük taç/faul üretimi açık kaldı. Uzun kariyer, EXE ve yeni lig bu turda çalıştırılmadı.
 
 Hedefli testler 11/11, tek genel koşu 124 geçti ve 6 koşullu test atlandı. Kartı olmayan değişiklik için son küçük koruma sonrası dört v0.8.8 hedefli testi yeniden geçti. Genel koşu ve kalibrasyon tekrarlanmadı.
+
+## Üçüncü tur · Uzun kariyer ve kayıt güvenliği
+
+25, 50 ve 100 sezonluk üç Model 4 kariyeri 175 sezon ve 53.550 maç tamamladı. Sezon geçişi, 18 kulüp puan tablosu, kadro tekilliği ve beş disk kayıt kontrol noktası başarılı. 100. sezonda kayıt 13,64 MB, tepe süreç belleği 212,8 MB. Medyan kasa 8,26 milyon, örneklenen haftalarda borç ve negatif kasa yok. Kulüpsüz başlayan senaryoda 12 işe alınma ve 11 görevden alma gözlendi. Sonuçlar üç tohumla sınırlı.
+
+Yedi eski şema 3 kombinasyonu açıldı ve ayrı hedefe yazıldı. Hasarlı UTF-8 ana kaydın sağlam yedeğini ezmesi engellendi. Yerinde kariyer migrasyonu yapılmadı. Hedefli 14 test, keşifte 127 test ve ayrı altı koşullu test başarılı. Genel benzersiz toplam 133/133. v0.8.7 EXE özeti ve main commit'i korundu. Bu turda paket üretilmedi.
+
+Ayrıntılar V088_UZUN_KARIYER_TESTLERI.md ve V088_KAYIT_GUVENLIGI.md.
