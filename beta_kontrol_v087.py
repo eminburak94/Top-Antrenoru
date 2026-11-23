@@ -46,6 +46,7 @@ try:
     assert not sub.winfo_exists()
     with patch('arayuz.messagebox.askyesno',return_value=True):
         button(popup,'Maçı bitir').invoke()
+    root.update()
     assert ui.s['week']==2
     match=next(m for m in ui.s['results'][0] if ui.s['club'] in (m['home'],m['away']))
     assert any(row[3]=='sub' for row in match['play'])

@@ -129,6 +129,7 @@ def main():
                 break
         assert attack and shot
         with patch('arayuz.messagebox.askyesno',return_value=True):controls['Maçı bitir'].invoke()
+        root.update()
         ui.last_report()
         popup=next(w for w in root.winfo_children() if isinstance(w,tk.Toplevel))
         tabs=next(w for w in children(popup) if isinstance(w,ttk.Notebook))

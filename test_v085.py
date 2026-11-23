@@ -155,6 +155,7 @@ class Playthrough(unittest.TestCase):
             self.button(dialog,'Maçı bitir').invoke()
             self.assertEqual(self.s['week'],1)
             self.button(dialog,'Maçı bitir').invoke()
+        self.root.update()
         self.assertEqual(self.s['week'],2)
         self.ui.last_report()
         self.assertIn('flow',self.s['last_tactical_review']['analysis'])

@@ -114,6 +114,7 @@ def main():
         controls['Durdur'].invoke()
         capture(popup,folder/'07_mac_merkezi.png')
         controls['Maçı bitir'].invoke()
+        root.update()
         ui.last_report()
         popup=next(w for w in root.winfo_children() if isinstance(w,tk.Toplevel))
         tabs=next(w for w in children(popup) if isinstance(w,ttk.Notebook))

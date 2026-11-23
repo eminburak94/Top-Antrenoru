@@ -1004,8 +1004,12 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews):
   w.geometry(f'{width}x{height}');w.minsize(800,510);w.transient(self.r);w.grab_set()
   f=ttk.Frame(w,padding=10);f.pack(fill='both',expand=True)
   header=ttk.Frame(f);header.pack(fill='x')
-  score=ttk.Label(header,style='Title.TLabel');score.pack(side='left',padx=8,pady=4)
-  live_status=ttk.Label(header);live_status.pack(side='right',padx=8)
+  score=ttk.Label(header,style='Title.TLabel')
+  score.pack(pady=2)
+  names=ttk.Frame(header);names.pack()
+  for team,color in zip((m.a,m.b),('#44dfce','#ff9c63')):
+   tk.Label(names,text=team,bg=THEME['panel'],fg=color,font=(FONT,10,'bold')).pack(side='left',padx=8)
+  live_status=ttk.Label(header);live_status.pack()
   bar=ttk.Frame(f);bar.pack(side='bottom',fill='x',pady=(5,0))
   style=tk.StringVar(value=m.style)
   cb=ttk.Combobox(bar,textvariable=style,values=['Balanced','Attack','Defend'],state='readonly',width=13)
@@ -1023,6 +1027,14 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews):
   yscroll=ttk.Scrollbar(event_box,command=log.yview)
   log.configure(yscrollcommand=yscroll.set)
   log.tag_configure('critical',foreground=THEME['accent'])
+  log.tag_configure('decision',foreground=THEME['warning'])
+  key_events={'goal','saved','yellow','red','second_yellow','offside','foul','advantage',
+              'corner','penalty','freekick','indirect','throw','rebound'}
+  applied=ttk.Label(f,style='Warning.TLabel',wraplength=700)
+  applied.pack(side='bottom',anchor='w')
+  def change(key,value,label,selection):
+   if m.instruction(key,value):
+    applied.configure(text=self.tr('Motora iletildi','Sent to match engine')+f' · {m.minute}′ · {label}: {selection}')
   yscroll.pack(side='right',fill='y');log.pack(fill='both',expand=True)
   stats=ttk.Label(stats_box,wraplength=200);stats.pack(anchor='w')
   renderer=Pitch(pitch,lambda pid:m.s.get('numbers',{}).get(pid,player(m.s,pid)['number']),
@@ -1042,19 +1054,23 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews):
    for key,tr_name,en_name in [('press','Pres','Press'),('tempo','Tempo','Tempo'),('width','Genişlik','Width')]:
     ttk.Label(tactical,text=self.tr(tr_name,en_name)).pack(side='left',padx=4)
     control=ttk.Combobox(tactical,values=[self.tr('Düşük','Low'),self.tr('Normal','Normal'),self.tr('Yüksek','High')],state='readonly',width=8)
-    control.current(1);control.pack(side='left')
-    control.bind('<<ComboboxSelected>>',lambda _,key=key,c=control:m.instruction(key,c.current()-1))
+    control.current(m.instructions[m.human][('press','tempo','width').index(key)]+1);control.pack(side='left')
+    control.bind('<<ComboboxSelected>>',lambda _,key=key,c=control,label=self.tr(tr_name,en_name):change(key,c.current()-1,label,c.get()))
    cb.configure(values=[self.management_text(key) for key in STYLES])
    cb.current(STYLES.index(m.style))
-   cb.bind('<<ComboboxSelected>>',lambda _:m.instruction('style',STYLES[cb.current()]))
+   cb.bind('<<ComboboxSelected>>',lambda _:change('style',STYLES[cb.current()],self.tr('Yaklaşım','Approach'),cb.get()))
   rating_line=ttk.Label(stats_box,wraplength=200);rating_line.pack(anchor='w',pady=8)
+  def show_score(minute):
+   label=f'{shown[0]} – {shown[1]}    {minute}′'
+   if score.cget('text')!=label:score.configure(text=label)
   def draw(frame):
    renderer.draw(frame)
-   score.configure(text=f'{m.a}  {shown[0]} – {shown[1]}  {m.b}   |   {frame[0]}′')
+   show_score(frame[0])
+  shown_log=None
   shown=[0,0]
   def refresh():
    shown[:]=m.score
-   score.config(text=f'{m.a}  {m.x} – {m.y}  {m.b}   |   {m.minute}′')
+   show_score(m.minute)
    on_target,saves,ratings=m.detail()
    totals=self.match_numbers(m.shots,on_target,saves)
    if m.positional:
@@ -1066,61 +1082,100 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews):
    if m.rules:
     totals+=f"\n\n{self.tr('Hakem profili','Referee profile')} {m.pitch.referee.identity}"
    stats.configure(text=totals)
-   log.configure(state='normal')
-   log.delete('1.0','end')
-   if not m.play:log.insert('end',self.tr('Henüz kayıtlı olay yok','No recorded events yet'))
-   for event in reversed(m.play[-35:]):
-    log.insert('end',self.commentary(event,(m.a,m.b))+'\n\n',
-               'critical' if event[3] in ('goal','red','yellow','offside','corner','penalty') else ())
-   log.configure(state='disabled')
+   nonlocal shown_log
+   current_log=m.play[-35:]
+   if current_log!=shown_log:
+    shown_log=current_log
+    log.configure(state='normal')
+    log.delete('1.0','end')
+    if not current_log:log.insert('end',self.tr('Henüz kayıtlı olay yok','No recorded events yet'))
+    for event in reversed(current_log):
+     kind=event[3]
+     tag='decision' if kind in ('foul','offside','yellow','second_yellow','red') else 'critical' if kind in key_events else ()
+     log.insert('end',self.commentary(event,(m.a,m.b))+'\n\n',tag)
+    log.configure(state='disabled')
    if ratings:
     best=max(ratings,key=ratings.get)
     rating_line.config(text=f"{self.tr('Öne çıkan','Top rated')} · {player(self.s,best)['name']} {ratings[best]:.1f}")
-  def tick(all=False):
-   if not all and frames:
-    draw(frames.popleft())
-    if not frames:refresh()
+  def complete():
+   pause()
+   m.commit()
+   w.destroy()
+   self.header()
+   (self.inbox_page if spatial else self.dashboard)()
+   self.autosave()
+  def drain():
+   draw(frames.popleft())
+   if not frames:
+    refresh()
+    if m.minute==90:complete()
+  def tick():
+   if frames:
+    drain()
     return
-   frames.clear()
+   if m.minute==90:
+    complete()
+    return
    before=len(m.play)
-   if all:m.capture=False
-   steps=(90 if m.positional else 18) if all else 1
-   for _ in range(steps):m.step()
-   if m.rules and sound.get() and any(row[3] in ('offside','foul','goal','penalty') for row in m.play[before:]):
-    w.bell()
-   if m.capture and (not important.get() or any(row[3] in ('goal','saved','red','offside','corner','penalty','freekick') for row in m.play[before:])):
-    frames.extend(interpolate(m.frames))
-    if frames:draw(frames.popleft())
-   if not frames:refresh()
-   if m.minute==90 and not frames:
-    m.commit();w.destroy();self.header();(self.inbox_page if spatial else self.dashboard)();self.autosave()
-  running=False;timer=None;speed=tk.StringVar(value='2x')
+   m.step()
+   events={row[3] for row in m.play[before:]}
+   if m.rules and sound.get() and events & {'offside','foul','goal','penalty'}:w.bell()
+   if m.capture and m.frames:
+    if not important.get() or events & key_events:frames.extend(interpolate(m.frames))
+    else:frames.append(m.frames[-1])
+    drain()
+   else:
+    refresh()
+    if m.minute==90:complete()
+  running=False;timer=None;fast=False;speed=tk.StringVar(value='2x')
   def status():
-   live_status.configure(text=f"{self.tr('Oynuyor','Playing') if running else self.tr('Duraklatıldı','Paused')} · {speed.get()}")
+   label=(self.tr('Hızlı simülasyon','Fast simulation') if fast else self.tr('Oynuyor','Playing')
+          if running else self.tr('Duraklatıldı','Paused'))
+   live_status.configure(text=f'{label} · {speed.get()}')
   speed.trace_add('write',lambda *_:status())
   status()
   def pause():
-   nonlocal running,timer
-   running=False
+   nonlocal running,timer,fast
+   running=False;fast=False
    status()
    if timer is not None:w.after_cancel(timer);timer=None
+  def cancel_on_destroy(event):
+   if event.widget is w and timer is not None:w.after_cancel(timer)
+  w.bind('<Destroy>',cancel_on_destroy)
   def auto():
-   nonlocal timer,running
+   nonlocal timer
    timer=None
    if not running:return
    tick()
-   if w.winfo_exists():timer=w.after((55 if frames else 750)//int(speed.get()[0]),auto)
-   else:running=False
+   if running:timer=w.after((55 if frames else 750)//int(speed.get()[0]),auto)
   def start():
    nonlocal running
-   if not running:running=True;status();auto()
+   if not running and not fast:running=True;status();auto()
+  def batch():
+   nonlocal timer
+   timer=None
+   if not fast:return
+   capture=m.capture
+   m.capture=False
+   try:
+    for _ in range(8 if m.positional else 3):
+     if m.minute==90:break
+     m.step()
+   finally:
+    m.capture=capture
+   refresh()
+   if m.minute==90:complete()
+   else:timer=w.after_idle(batch)
   def finish():
+   nonlocal fast,timer
    pause()
    if m.positional and not messagebox.askyesno(self.tr('Maçı tamamla','Complete match'),
         self.tr('Kalan süre mevcut taktiklerle simüle edilsin mi?',
                 'Simulate the remaining time with the current tactics?'),parent=w):
     return
-   tick(True)
+   frames.clear()
+   fast=True;status()
+   timer=w.after_idle(batch)
   def single():pause();tick()
   def sub():
    _,_,ratings=m.detail()
@@ -1132,9 +1187,19 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews):
     label=detail_position(actual,self.lang) if actual in POSITION_NAMES else position_code(actual,self.lang)
     return f"{label} · {p['name']} · {self.tr('Kond.','Fit.')} {condition}% · {self.tr('Puan','Rating')} {ratings.get(pid,'—')}"
    pause();ls=m.la if s['club']==m.a else m.lb;bench=[p for p in roster(s['club'],s['year'],m.s) if p['id'] not in m.used and not state(m.s,p)['injury'] and not state(m.s,p)['ban']];d=tk.Toplevel(w);d.title(self.tr('Oyuncu değişikliği','Substitution'));a=ttk.Combobox(d,values=[sub_label(p) for p in ls],state='readonly',width=58);b=ttk.Combobox(d,values=[sub_label(p) for p in bench],state='readonly',width=58);a.pack(padx=12,pady=8);b.pack(padx=12,pady=8)
+   d.transient(w);d.grab_set()
+   def close():
+    d.destroy();w.grab_set()
+   d.protocol('WM_DELETE_WINDOW',close)
+   d.bind('<Escape>',lambda _:close())
    def apply():
-    if a.current()>=0 and b.current()>=0 and m.substitute(ls[a.current()]['id'],bench[b.current()]['id']):d.destroy();refresh()
-    else:messagebox.showinfo('Top Antrenörü',self.tr('Değişiklik yapılamadı.','Substitution unavailable.'))
+    if a.current()>=0 and b.current()>=0 and m.substitute(ls[a.current()]['id'],bench[b.current()]['id']):
+     frames.clear()
+     close()
+     if m.capture and m.positional:
+      m.pitch.align();m.pitch.frame();draw(m.frames[-1])
+     refresh()
+    else:messagebox.showinfo('Top Antrenörü',self.tr('Değişiklik yapılamadı.','Substitution unavailable.'),parent=d)
    ttk.Button(d,text=self.tr('Uygula','Apply'),command=apply).pack(pady=8)
   self.button(bar,'Oyuncu değiştir','Substitute',sub).pack(side='left');self.button(bar,'Başlat','Start',start).pack(side='left');self.button(bar,'Durdur','Pause',pause).pack(side='left');ttk.Combobox(bar,textvariable=speed,values=['1x','2x','4x'],state='readonly',width=4).pack(side='left');self.button(bar,'Adım' if m.positional else '5 dakika','Step' if m.positional else '5 minutes',single).pack(side='left');self.button(bar,'Maçı bitir','Finish match',finish).pack(side='right');w.protocol('WM_DELETE_WINDOW',lambda:messagebox.showinfo('Top Antrenörü',self.tr('Önce maçı bitir.','Finish match first.')));w.update_idletasks();refresh()
   if m.capture or not spatial:

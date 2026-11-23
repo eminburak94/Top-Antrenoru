@@ -160,6 +160,7 @@ class InterfaceTests(unittest.TestCase):
             button('Başlat','Start').invoke()
             button('Durdur','Pause').invoke()
             button('Maçı bitir','Finish match').invoke()
+            root.update()
             self.assertEqual(s['week'],2)
             self.assertTrue(s['inbox'])
             self.assertIn('analysis',s['last_tactical_review'])

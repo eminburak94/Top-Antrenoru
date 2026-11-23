@@ -1,7 +1,7 @@
 """Retained Canvas renderer for bounded match frames. No simulation writes."""
 import math
 
-from tema import FONT,PALETTE
+from tema import FONT
 
 
 class Pitch:
@@ -18,9 +18,10 @@ class Pitch:
 
     def draw(self,frame):
         c=self.canvas
-        self.last=frame
         w,h=c.winfo_width(),c.winfo_height()
         size=(w,h)
+        if frame==self.last and size==self.size:return
+        self.last=frame
         if size!=self.size:
             c.delete('all')
             self.items.clear()
@@ -59,6 +60,10 @@ class Pitch:
         if carrier and math.hypot(carrier[2]-tx,carrier[3]-ty)>3:carrier=None
         if len(frame)>3:
             carrier=next((v for v in all_players if v[1]==frame[3]),None)
+        if carrier:
+            # Keep the actual carrier at the actual ball location; move only other markers.
+            all_players.remove(carrier)
+            all_players.insert(0,carrier)
         used=set()
         placed=[]
         radius=11 if h<420 else 13
@@ -69,7 +74,7 @@ class Pitch:
             while any(math.hypot(px-x1,draw_y-y1)<radius*1.78 for x1,y1 in placed) and attempts<6:
                 attempts+=1
                 draw_y=max(y+radius,min(bottom-radius,py+(-1 if attempts%2 else 1)*radius*(1+(attempts-1)//2)))
-            draw_y=max(y+radius,min(bottom-radius,draw_y))
+            if not carrier or pid!=carrier[1]:draw_y=max(y+radius,min(bottom-radius,draw_y))
             placed.append((px,draw_y))
             if pid not in self.items:
                 bead=c.create_oval(0,0,1,1,fill=('#44dfce' if side==0 else '#ff9c63'),outline='#142636',width=2)
@@ -102,10 +107,13 @@ class Pitch:
 def interpolate(frames):
     # Preserve official endpoints and avoid animating a phase reset across the pitch.
     result=[]
-    for index,end in enumerate(frames):
-        if index:
-            start=frames[index-1]
-            if start[0]==end[0] and math.dist(start[1],end[1])<=.26:
+    for end in frames:
+        if result:
+            start=result[-1]
+            if start==end:continue
+            same_phase=len(start)==len(end) and (len(start)<5 or
+                all(start[4][key]==end[4][key] for key in ('signal','set_piece','wall')))
+            if same_phase and start[0]==end[0] and math.dist(start[1],end[1])<=.26:
                 for fraction in (1/3,2/3):
                     def blend(a,b):return a+(b-a)*fraction
                     xy=tuple(blend(a,b) for a,b in zip(start[1],end[1]))
