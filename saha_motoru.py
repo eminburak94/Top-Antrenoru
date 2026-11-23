@@ -79,6 +79,8 @@ class PitchState:
                         y+=(by-y)*pursuit
                 if self.m.rules and role!='GK':x,y=self.target_adjust(side,pid,role,x,y)
                 step=(.10+.004*pace)*energy
+                if m.tactical_ai and role!='GK':
+                    step*=.85+.15*m.player_condition(pid)/100
                 self.xy[pid]=(px+clamp(x-px,-step,step),py+clamp(y-py,-step,step))
 
     def receive(self,side,pid,point=None):

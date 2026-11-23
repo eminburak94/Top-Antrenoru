@@ -298,6 +298,16 @@ def validate_manager(s):
         for row in audit['decisions']:
             require(isinstance(row,list) and len(row)==5 and integer(row[0],0,89 if s.get('match_model') in (2,3,4) else 85) and integer(row[1],0,1)
                     and row[2] in ('press','tempo','width','style'),'Invalid match instruction')
+        if 'chances' in audit:
+            chances=audit['chances']
+            players=catalog(s)
+            require(s.get('match_model')==4 and isinstance(chances,list) and len(chances)<=90,
+                    'Invalid match chances')
+            for row in chances:
+                require(isinstance(row,list) and len(row)==6 and integer(row[0],1,90)
+                        and integer(row[1],0,1) and isinstance(row[2],str) and row[2] in players
+                        and row[3] in SHOT_EVENTS and all(numeric(value,0,1) for value in row[4:]),
+                        'Invalid match chance')
     if 'manager_state' not in s:return
     m=s['manager_state']
     require(isinstance(m,dict) and m.get('version')==1 and m.get('id')==s['career_id']

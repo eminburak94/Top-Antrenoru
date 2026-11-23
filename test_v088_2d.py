@@ -20,6 +20,31 @@ def button(parent, text):
 
 
 class PlaybackTests(TestCase):
+    def test_model4_report_shows_chances_coaching_windows_and_player_contributions(self):
+        s=new('GALATASARAY',seed=822,match_model=4)
+        s['lang']='EN'
+        match=LiveMatch(s)
+        for _ in range(25):
+            match.step()
+        match.instruction('tempo',1)
+        match.finish()
+        self.assertTrue(match.commit())
+        root=tk.Tk()
+        self.addCleanup(root.destroy)
+        ui=UI(root)
+        ui.begin(s)
+        ui.last_report()
+        report=next(w for w in root.winfo_children() if isinstance(w,tk.Toplevel))
+        notebook=next(w for w in descendants(report) if isinstance(w,ttk.Notebook))
+        panels={notebook.tab(tab,'text'):root.nametowidget(tab) for tab in notebook.tabs()}
+        chances=panels['Chances']
+        self.assertEqual(len(chances.get_children()),sum(match.shots))
+        audit=next(w for w in descendants(panels['Tactical review']) if isinstance(w,tk.Listbox))
+        self.assertTrue(any('21–25′' in row and '26–30′' in row for row in audit.get(0,'end')))
+        marks=panels['Player ratings']
+        self.assertIn('assists',marks['columns'])
+        self.assertEqual(sum(int(marks.item(row,'values')[5]) for row in marks.get_children()),sum(match.shots))
+
     def start_match(self, match, width=960, language='EN', scale=None):
         root=tk.Tk()
         self.addCleanup(root.destroy)
@@ -126,6 +151,24 @@ class PlaybackTests(TestCase):
 
 
 class CanvasTests(TestCase):
+    def test_model4_goal_frame_updates_score_at_the_shot_outcome(self):
+        match=LiveMatch(new('GALATASARAY',seed=822,match_model=4))
+        match.minute=40
+        match.capture=True
+        pitch=match.pitch
+        scorer=match.slots[0][-1][1]
+        pitch.xy[scorer]=(.895,.5)
+        pitch.receive(0,scorer)
+        with patch.object(match.rng,'uniform',return_value=0), \
+             patch.object(match.rng,'random',side_effect=[0,.99]):
+            pitch.shoot(penalty=True)
+        frames=interpolate(match.frames)
+        self.assertEqual(frames[0][4]['score'],(0,0))
+        self.assertEqual(frames[-1][4]['score'],(1,0))
+        self.assertEqual(frames[-1][4]['action'],'goal')
+        self.assertEqual(sum(frame[4]['action']=='goal' for frame in frames),1)
+        self.assertEqual(match.play[-1],[40,0,scorer,'goal',None])
+
     def test_interpolation_respects_stoppage_and_drops_identical_frames(self):
         a=(20,(.5,.5),((),()),None,dict(signal=None,set_piece=None,wall=(),referee=(.3,.6)))
         b=(20,(.55,.5),((),()),None,dict(signal='offside',set_piece=None,wall=(),referee=(.35,.6)))

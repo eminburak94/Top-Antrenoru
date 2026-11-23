@@ -39,6 +39,14 @@ class CalibratedPitch(RulesPitch):
         super().__init__(match, seed)
         self.corner_phase = None
 
+    def frame(self, action=None, ball=None):
+        if not self.m.capture:
+            return
+        super().frame()
+        minute,point,players,owner,meta=self.m.frames[-1]
+        self.m.frames[-1]=(minute,ball if ball is not None else point,players,owner,
+                           meta | {'score':tuple(self.m.score),'action':action,'restart':self.restart})
+
     def align(self):
         # Preserve coordinates of surviving players after a dismissal.
         previous=self.anchor[:]
@@ -112,7 +120,7 @@ class CalibratedPitch(RulesPitch):
         defender = self.nearest(1-side, self.ball, True)
         if defender is not None and pressure > .04:
             attack, defence = m.profiles[owner], m.profiles[defender]
-            fitness = m.energy(1-side)
+            fitness = m.energy(1-side)*(.83+.17*m.player_condition(defender)/100)
             willingness = clamp(.20 + pressure*.55 + m.instructions[1-side][0]*.07
                                 + (defence['Work rate']-10)*.009, .05, .86)
             if m.rng.random() < willingness:
@@ -137,6 +145,7 @@ class CalibratedPitch(RulesPitch):
         skills=m.profiles[owner]
         direction=1 if side==0 else -1
         step=(.058+skills['Dribbling']*.003+skills['Pace']*.0015)*m.energy(side)
+        step*=.87+.13*m.player_condition(owner)/100
         is_keeper=any(pos=='GK' and pid==owner for pos,pid in m.slots[side])
         lo,hi=((.055,.18) if side==0 else (.82,.945)) if is_keeper else (.055,.945)
         self.xy[owner]=self.ball=(clamp(x+direction*step,lo,hi),y+(.5-y)*.12)
@@ -205,7 +214,7 @@ class CalibratedPitch(RulesPitch):
         else:
             if self.set_piece is None:
                 target=open_play_target(target,m.strengths[side]['F'],m.strengths[rival]['D'])
-            target*=m.energy(side)
+            target*=m.energy(side)*(.94+.06*m.player_condition(player)/100)
             if side==0:target=min(.82,target*1.045)
         m.shots[side]+=1
         self.partial_shots[side]+=1
@@ -213,19 +222,20 @@ class CalibratedPitch(RulesPitch):
         self.last_pass=None
         self.owner=None
         self.ball=((x+goal_x)*.5,(y+aim)*.5)
-        self.frame()
+        self.frame('shot')
         if not penalty and defender and m.rng.random()<.035+.26*pressure:
             outcome='blocked'
+            self.frame(outcome,self.xy[defender])
             self.dead_ball('corner',side,(goal_x,.02 if y<.5 else .98))
         elif m.rng.random()>=target:
             outcome='wide'
             self.ball=(goal_x,.23 if aim<.5 else .77)
-            self.frame()
+            self.frame(outcome)
             self.dead_ball('goal_kick',rival,(.94 if side==0 else .06,.5))
         elif keeper and m.rng.random()<save:
             outcome='saved'
             self.ball=(goal_x,aim)
-            self.frame()
+            self.frame(outcome)
             if m.rng.random()<clamp(.24-(keep['Handling']-10)*.017,.06,.43):
                 point=(.87 if side==0 else .13,aim)
                 attacker=self.nearest(side,point,True)
@@ -246,8 +256,8 @@ class CalibratedPitch(RulesPitch):
         else:
             outcome='goal'
             self.ball=(goal_x,aim)
-            self.frame()
             m.score[side]+=1
+            self.frame(outcome)
             m.events.append([m.minute,(m.a,m.b)[side],player])
             if assist and assist[0]==side and assist[2]==player:
                 m.assists.append([m.minute,side,assist[1],player])
@@ -255,6 +265,8 @@ class CalibratedPitch(RulesPitch):
                 self.event(side,player,'set_piece_goal')
             self.dead_ball('kickoff',rival,(.5,.5))
         self.event(side,player,outcome,keeper if outcome=='saved' else None)
+        if m.human is not None:
+            m.analysis['chances'].append([m.minute,side,player,outcome,round(x,3),round(y,3)])
 
     def restart_play(self):
         kind=self.restart

@@ -11,6 +11,7 @@ class Pitch:
         self.name=name
         self.items={}
         self.ball=None
+        self.trail=None
         self.last=None
         self.size=None
         self.focus=None
@@ -21,11 +22,13 @@ class Pitch:
         w,h=c.winfo_width(),c.winfo_height()
         size=(w,h)
         if frame==self.last and size==self.size:return
+        previous=self.last if size==self.size else None
         self.last=frame
         if size!=self.size:
             c.delete('all')
             self.items.clear()
             self.ball=None
+            self.trail=None
             self.size=size
             pad=16
             usable_w,usable_h=max(1,w-2*pad),max(1,h-2*pad)
@@ -94,6 +97,17 @@ class Pitch:
         c.itemconfigure(self.focus,text=self.name(carrier[1]) if carrier else '')
         if len(frame)>4:
             meta=frame[4]
+            if 'score' in meta:
+                if self.trail is None:
+                    self.trail=c.create_line(0,0,1,1,fill='#fff1b3',width=2,state='hidden')
+                moving=(frame[3] is None and previous and previous[0]==frame[0]
+                        and previous[1]!=frame[1] and meta['restart'] is None)
+                if moving:
+                    c.coords(self.trail,*xy(*previous[1]),tx,ty)
+                    c.itemconfigure(self.trail,state='normal')
+                    c.tag_raise(self.ball)
+                else:
+                    c.itemconfigure(self.trail,state='hidden')
             rx,ry=xy(*meta['referee'])
             c.coords(self.ref,rx,ry-5,rx+5,ry,rx,ry+5,rx-5,ry)
             c.itemconfigure(self.ref,state='normal')
@@ -104,7 +118,7 @@ class Pitch:
         c.tag_raise(self.focus)
 
 
-def interpolate(frames):
+def interpolate(frames, bridge=False):
     # Preserve official endpoints and avoid animating a phase reset across the pitch.
     result=[]
     for end in frames:
@@ -112,8 +126,9 @@ def interpolate(frames):
             start=result[-1]
             if start==end:continue
             same_phase=len(start)==len(end) and (len(start)<5 or
-                all(start[4][key]==end[4][key] for key in ('signal','set_piece','wall')))
-            if same_phase and start[0]==end[0] and math.dist(start[1],end[1])<=.26:
+                all(start[4].get(key)==end[4].get(key) for key in ('signal','set_piece','wall','restart')))
+            continuous_minute=start[0]==end[0] or bridge and end[0]==start[0]+1
+            if same_phase and continuous_minute and math.dist(start[1],end[1])<=.26:
                 for fraction in (1/3,2/3):
                     def blend(a,b):return a+(b-a)*fraction
                     xy=tuple(blend(a,b) for a,b in zip(start[1],end[1]))
@@ -125,7 +140,10 @@ def interpolate(frames):
                     point=(end[0],xy,tuple(sides))
                     if len(end)>3:
                         point+=(end[3] if end[3]==start[3] else None,)
-                    if len(end)>4:point+=(start[4],)
+                    if len(end)>4:
+                        meta=start[4]
+                        if meta.get('action'):meta=meta | {'action':None}
+                        point+=(meta,)
                     result.append(point)
         result.append(end)
     return result

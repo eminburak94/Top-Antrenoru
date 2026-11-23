@@ -175,6 +175,12 @@ class Match:
         self.profiles = {pid: attributes(s, player(self.s,pid)) for pid in self.used}
         self.strengths = [self.strength(slots) for slots in self.slots]
         self.pitch=CalibratedPitch(self,seed) if s.get('match_model')==4 else RulesPitch(self,seed) if self.rules else PitchState(self) if self.positional else None
+        self.tactical_ai=isinstance(self.pitch,CalibratedPitch)
+        if self.tactical_ai and self.human is not None:
+            self.analysis['chances']=[]
+        self.exertion={}
+        self.initial_fitness={pid:state(s,player(s,pid))['condition'] for pid in self.used} if self.tactical_ai else {}
+        self.last_ai_sub=[-10,-10]
         if s.get('manager_state') and s['club'] in (self.a,self.b):
             self.opening_review=[]
             for team,slots,strength in zip((self.a,self.b),self.slots,self.strengths):
@@ -221,6 +227,29 @@ class Match:
     def energy(self,side):
         return max(.70,1-self.loads[side]/170)
 
+    def player_condition(self,pid):
+        initial=self.initial_fitness.get(pid)
+        if initial is None:
+            initial=state(self.s,player(self.s,pid))['condition']
+        return clamp(initial-self.exertion.get(pid,0),0,100)
+
+    def coach_step(self,side):
+        outfield=[pid for role,pid in self.slots[side] if role!='GK']
+        if not outfield:
+            return
+        tired=sum(self.player_condition(pid) for pid in outfield)/len(outfield)<82
+        spread=self.score[side]-self.score[1-side]
+        if spread<0:
+            style,press,tempo='Attack',int(not tired),int(self.minute>=60)
+        elif spread>0 and self.minute>=65:
+            style,press,tempo='Defend',-1,-1
+        else:
+            style,press,tempo='Balanced',-int(tired),0
+        for key,value in (('style',style),('press',press),('tempo',tempo)):
+            self.instruction(key,value,side)
+        if self.minute>=55 and self.minute-self.last_ai_sub[side]>=10 and self.ai_substitution(side):
+            self.last_ai_sub[side]=self.minute
+
     def instruction(self,key,value,side=None):
         side=self.human if side is None else side
         if not self.spatial or self.minute>=90 or side not in (0,1):return False
@@ -249,13 +278,17 @@ class Match:
     def positional_step(self):
         if self.minute>=90:return
         self.frames=[]
-        if self.minute in (55,70):
+        if self.tactical_ai:
+            if self.minute>=45 and self.minute%5==0:
+                for side in (0,1):
+                    if side!=self.human:self.coach_step(side)
+        elif self.minute in (55,70):
             for side in (0,1):
                 if side==self.human:continue
                 spread=self.score[side]-self.score[1-side]
                 self.instruction('style','Attack' if spread<0 else 'Defend' if spread>0 else 'Balanced',side)
                 self.instruction('press',int(spread<0),side)
-        if self.minute in (64,76):
+        if not self.tactical_ai and self.minute in (64,76):
             for side in (0,1):
                 if side!=self.human:self.ai_substitution(side)
         self.minute+=1
@@ -263,6 +296,9 @@ class Match:
             press,tempo,_=self.instructions[side]
             self.loads[side]+=.20+.052*press+.042*tempo
             for role,pid in slots:
+                if self.tactical_ai and role!='GK':
+                    cost=.21+.045*press+.035*tempo-.006*(self.profiles[pid]['Stamina']-10)
+                    self.exertion[pid]=self.exertion.get(pid,0)+cost
                 self.played[side][pid]=None
                 self.minutes[pid]=self.minutes.get(pid,0)+1
                 if role=='GK':self.keepers[side][pid]=self.keepers[side].get(pid,0)+1
@@ -378,6 +414,8 @@ class Match:
         return self.substitute_side(side,outid,inid)
 
     def ai_substitution(self,side):
+        if self.tactical_ai:
+            return self.replace_tired_player(side)
         team=(self.a,self.b)[side]
         slots=[(role,pid) for role,pid in self.slots[side] if role!='GK']
         if not slots:return False
@@ -390,6 +428,25 @@ class Match:
         for p in sorted(bench,key=lambda p:(-condition(p),p['id'])):
             if condition(p)>condition(player(self.s,out))+4 and self.substitute_side(side,out,p['id']):
                 return True
+        return False
+
+    def replace_tired_player(self,side):
+        if self.team_subs[side]>=3:
+            return False
+        outfield=sorted((self.player_condition(pid),role,pid) for role,pid in self.slots[side] if role!='GK')
+        if not outfield or outfield[0][0]>=84:
+            return False
+        team=(self.a,self.b)[side]
+        bench=[p for p in roster(team,self.s['year'],self.s)
+               if p['id'] not in self.used and p['pos']!='GK' and eligible(self.s,p)]
+        for condition,role,out in outfield:
+            if condition>=84:
+                break
+            options=[p for p in bench if fit_level(p,role)>=2 and self.player_condition(p['id'])>=condition+8]
+            options.sort(key=lambda p:(-fit_level(p,role),-self.player_condition(p['id']),p['id']))
+            for p in options:
+                if self.substitute_side(side,out,p['id']):
+                    return True
         return False
 
     def replacement_role(self,side,role,incoming):
@@ -425,6 +482,8 @@ class Match:
             if side==self.human or not self.positional:self.subs+=1
             self.play.append([self.minute,side,inid,'sub',outid])
             self.profiles[inid] = attributes(self.s, incoming)
+            if self.tactical_ai:
+                self.initial_fitness[inid]=state(self.s,incoming)['condition']
             self.strengths[side] = self.strength(slots)
             return True
         return False

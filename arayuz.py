@@ -1,5 +1,6 @@
+import math
 import re
-from collections import deque
+from collections import Counter, deque
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog, simpledialog
 from pathlib import Path
@@ -13,7 +14,7 @@ from oyuncu import ability, age_at, attributes, state, GROUPS
 from transfer import asking_fee, deal, answer_offer, reject_all, set_sale_status, selling_ready, value
 from yarisma import window, FORMATIONS, STYLES, TRANSFER_PERIODS, opening_date
 from mac import eligible, fits, formation_roles, manual_slots, select_slots, match_positions, suitable
-from istatistik import combine
+from istatistik import SHOT_EVENTS, combine
 from yerellestirme import position_code,  country_label, position_label, citizenship_ids, player_countries
 from kayit import save_game, load_game, autosave, backup_path, SaveError
 from yonetim import squad_review
@@ -950,6 +951,12 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews):
   return (f"{self.tr('Şut','Shots')} {shots[0]}–{shots[1]}   "
           f"{self.tr('İsabet','On target')} {on_target[0]}–{on_target[1]}   "
           f"{self.tr('Kurtarış','Saves')} {saves[0]}–{saves[1]}")
+ def shot_label(self,action):
+  return {
+   'shot':self.tr('Şut','Shot'), 'goal':self.tr('Gol','Goal'),
+   'saved':self.tr('Kurtarış','Save'), 'wide':self.tr('Dışarı','Wide'),
+   'blocked':self.tr('Blok','Blocked'), 'on_target':self.tr('İsabetli şut','On target'),
+  }.get(action,'')
  def report(self,match,parent=None,review=None):
   w=tk.Toplevel(parent or self.r);w.title(self.tr('Maç raporu','Match report'))
   w.geometry('650x560')
@@ -979,7 +986,23 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews):
    keys={'style':self.tr('Yaklaşım','Approach'),'press':self.tr('Pres','Press'),
          'tempo':'Tempo','width':self.tr('Genişlik','Width')}
    for minute,side,key,old,value in data['decisions']:
-    audit.insert('end',f"{minute}′ {(home,away)[side]} · {keys[key]} {old} → {value}")
+    def label(v):
+     if key=='style' and v in STYLES:return self.management_text(v)
+     return self.instruction_level(v)
+    audit.insert('end',f"{minute}′ {(home,away)[side]} · {keys[key]} {label(old)} → {label(value)}")
+   if data['decisions'] and 'play' in match:
+    audit.insert('end',self.tr('Müdahale çevresi · Şut (isabet) · Ev–dep',
+                              'Around changes · Shots (on target) · Home–away'))
+    for minute in sorted({row[0] for row in data['decisions']}):
+     first,last=max(1,minute-4),min(90,minute+5)
+     def attempts(start,end):
+      shots=[0,0];target=[0,0]
+      for tick,side,_,event,_ in match['play']:
+       if start<=tick<=end and event in SHOT_EVENTS:
+        shots[side]+=1;target[side]+=event not in ('wide','blocked')
+      return '–'.join(f'{a} ({b})' for a,b in zip(shots,target))
+     before=f'{first}–{minute}′ {attempts(first,minute)}' if minute else '—'
+     audit.insert('end',f"{minute}′ · {before}  →  {minute+1}–{last}′ {attempts(minute+1,last)}")
    metrics=self.tr('Dakika · Şut · Duran hücum · Yük','Minute · Shots · Stopped attacks · Load')
    if 'flow' in data:
     flow=data['flow']
@@ -990,7 +1013,6 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews):
      a,b=flow[key];audit.insert('end',f'{label} · {a}–{b}')
     metrics=self.tr('Dakika · Şut · Top kazanma · Yük','Minute · Shots · Recoveries · Load')
    if self.s.get('match_model') in (3,4):
-    from collections import Counter
     events=Counter(row[3] for row in match.get('play',[]))
     labels=(('foul','Faul','Foul'),('offside','Ofsayt','Offside'),('corner','Korner','Corner'),
             ('penalty','Penaltı','Penalty'),('throw','Taç','Throw-in'),
@@ -1000,6 +1022,17 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews):
    audit.insert('end',metrics)
    for minute,shots,won,load,_ in data['periods']:
     audit.insert('end',f"{minute:02d}′ · {shots[0]}:{shots[1]} · {won[0]}:{won[1]} · {load[0]}:{load[1]}")
+   if 'chances' in data:
+    chances=ttk.Treeview(tabs,columns=('minute','player','zone','result'),show='headings')
+    tabs.add(chances,text=self.tr('Pozisyonlar','Chances'))
+    for column,title,width in (
+      ('minute',self.tr('Dakika','Minute'),50),('player',self.tr('Oyuncu / takım','Player / team'),290),
+      ('zone',self.tr('Kaleye mesafe','Distance to goal'),110),('result',self.tr('Sonuç','Outcome'),100)):
+     chances.heading(column,text=title);chances.column(column,width=width)
+    for minute,side,pid,outcome,x,y in data['chances']:
+     distance=round(math.hypot((1-x if side==0 else x)*105,(y-.5)*68))
+     chances.insert('','end',values=(f'{minute}′',f"{player(self.s,pid)['name']} · {(home,away)[side]}",
+                                     f'{distance} m',self.shot_label(outcome)))
   scorer_tab=ttk.Frame(tabs)
   tabs.add(scorer_tab,text=self.management_text('scorers_link'))
   scorers=tk.Listbox(scorer_tab);scorers.pack(fill='both',expand=True)
@@ -1014,12 +1047,23 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews):
   self.button(scorer_tab,*TEXT['open_profile'],scorer_profile).pack(anchor='w')
   log.bind('<Double-1>',lambda _e:self.profile(player(self.s,match['play'][log.curselection()[0]][2]))
            if log.curselection() else None)
-  marks=ttk.Treeview(tabs,columns=('name','minute','rating'),show='headings')
+  goals=Counter(row[2] for row in match['events'])
+  assists=Counter(row[2] for row in match.get('assists',[]))
+  shots=Counter(row[2] for row in match.get('play',[]) if row[3] in SHOT_EVENTS)
+  saves=Counter(row[4] for row in match.get('play',[]) if row[3]=='saved')
+  marks=ttk.Treeview(tabs,columns=('name','minute','rating','goals','assists','shots','saves'),show='headings')
   tabs.add(marks,text=self.tr('Oyuncu puanları','Player ratings'))
-  for column,title in [('name',self.tr('Oyuncu','Player')),('minute',self.tr('Dakika','Minutes')),('rating',self.tr('Puan','Rating'))]:
-   marks.heading(column,text=title);marks.column(column,width=230 if column=='name' else 75)
+  for column,title in [('name',self.tr('Oyuncu','Player')),('minute',self.tr('Dakika','Minutes')),
+                       ('rating',self.tr('Puan','Rating')),('goals',self.tr('Gol','Goals')),
+                       ('assists',self.tr('Asist','Assists')),('shots',self.tr('Şut','Shots')),
+                       ('saves',self.tr('Kurtarış','Saves'))]:
+   marks.heading(column,text=title);marks.column(column,width=215 if column=='name' else 62)
   for pid,rating in sorted(match.get('ratings',{}).items(),key=lambda row:(-row[1],player(self.s,row[0])['name'])):
-   marks.insert('','end',values=(player(self.s,pid)['name'],match['minutes'][pid],rating))
+   marks.insert('','end',values=(player(self.s,pid)['name'],match['minutes'][pid],rating,
+                                 goals[pid],assists[pid],shots[pid],saves[pid]))
+ def instruction_level(self,value):
+  levels=(self.tr('Düşük','Low'),self.tr('Normal','Normal'),self.tr('Yüksek','High'))
+  return levels[value+1] if type(value) is int and -1<=value<=1 else str(value)
  def last_report(self):
   s=self.s
   if s['results']:
@@ -1059,7 +1103,7 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews):
   log.configure(yscrollcommand=yscroll.set)
   log.tag_configure('critical',foreground=THEME['accent'])
   log.tag_configure('decision',foreground=THEME['warning'])
-  key_events={'goal','saved','yellow','red','second_yellow','offside','foul','advantage',
+  key_events=SHOT_EVENTS | {'yellow','red','second_yellow','offside','foul','advantage',
               'corner','penalty','freekick','indirect','throw','rebound'}
   applied=ttk.Label(f,style='Warning.TLabel',wraplength=700)
   applied.pack(side='bottom',anchor='w')
@@ -1092,12 +1136,20 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews):
    cb.current(STYLES.index(m.style))
    cb.bind('<<ComboboxSelected>>',lambda _:change('style',STYLES[cb.current()],self.tr('Yaklaşım','Approach'),cb.get()))
   rating_line=ttk.Label(stats_box,wraplength=200);rating_line.pack(anchor='w',pady=8)
-  def show_score(minute):
-   label=f'{shown[0]} – {shown[1]}    {minute}′'
+  frame_delay=55
+  def show_score(minute,pair=None,action=None):
+   home,away=shown if pair is None else pair
+   label=f'{home} – {away}    {minute}′'
+   if action:label+=f' · {self.shot_label(action)}'
    if score.cget('text')!=label:score.configure(text=label)
   def draw(frame):
+   nonlocal frame_delay
+   meta=frame[4] if len(frame)>4 else {}
+   action=meta.get('action')
+   frame_delay=780 if action in SHOT_EVENTS else 55
    renderer.draw(frame)
-   show_score(frame[0])
+   show_score(frame[0],meta.get('score'),action)
+   if action=='goal' and sound.get():w.bell()
   shown_log=None
   shown=[0,0]
   def refresh():
@@ -1113,6 +1165,12 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews):
     totals+='\n\n'+'\n'.join(f'{key} · {a}–{b}' for key,(a,b) in pairs)
    if m.rules:
     totals+=f"\n\n{self.tr('Hakem profili','Referee profile')} {m.pitch.referee.identity}"
+   if m.tactical_ai and m.human is not None:
+    rival=1-m.human
+    press,tempo,_=m.instructions[rival]
+    totals+=f"\n\n{self.tr('Rakip taktikleri','Opposition tactics')}\n"
+    totals+=f"{self.management_text(m.styles[rival])} · {self.tr('Pres','Press')} {self.instruction_level(press)}\n"
+    totals+=f"Tempo {self.instruction_level(tempo)}"
    stats.configure(text=totals)
    nonlocal shown_log
    current_log=m.play[-35:]
@@ -1151,9 +1209,16 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews):
    before=len(m.play)
    m.step()
    events={row[3] for row in m.play[before:]}
-   if m.rules and sound.get() and events & {'offside','foul','goal','penalty'}:w.bell()
+   audible={'offside','foul','penalty'}
+   if not (m.tactical_ai and m.capture):audible.add('goal')
+   if m.rules and sound.get() and events & audible:w.bell()
    if m.capture and m.frames:
-    if not important.get() or events & key_events:frames.extend(interpolate(m.frames))
+    if not important.get() or events & key_events:
+     previous=renderer.last
+     if m.tactical_ai and previous:
+      frames.extend(interpolate([previous,*m.frames],bridge=True)[1:])
+     else:
+      frames.extend(interpolate(m.frames))
     else:frames.append(m.frames[-1])
     drain()
    else:
@@ -1179,7 +1244,7 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews):
    timer=None
    if not running:return
    tick()
-   if running:timer=w.after((55 if frames else 750)//int(speed.get()[0]),auto)
+   if running:timer=w.after((frame_delay if frames else 750)//int(speed.get()[0]),auto)
   def start():
    nonlocal running
    if not running and not fast:running=True;status();auto()
@@ -1214,7 +1279,7 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews):
    positions={pid:role for side in m.slots for role,pid in side}
    def sub_label(p):
     pid=p['id']; played=m.minutes.get(pid,0)
-    condition=max(0,round(state(m.s,p)['condition']-played*20/90))
+    condition=round(m.player_condition(pid)) if m.tactical_ai else max(0,round(state(m.s,p)['condition']-played*20/90))
     actual=positions.get(pid,p['pos'])
     label=detail_position(actual,self.lang) if actual in POSITION_NAMES else position_code(actual,self.lang)
     return f"{label} · {p['name']} · {self.tr('Kond.','Fit.')} {condition}% · {self.tr('Puan','Rating')} {ratings.get(pid,'—')}"
@@ -1223,6 +1288,8 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews):
    ls=m.la if side==0 else m.lb
    bench=[p for p in roster(s['club'],s['year'],m.s) if p['id'] not in m.used and eligible(m.s,p)]
    d=tk.Toplevel(w);d.title(self.tr('Oyuncu değişikliği','Substitution'))
+   remaining=3-(m.team_subs[side] if m.positional else m.subs)
+   ttk.Label(d,text=f"{self.tr('Kalan değişiklik','Substitutions remaining')} · {remaining}").pack(pady=(8,0))
    a=ttk.Combobox(d,values=[sub_label(p) for p in ls],state='readonly',width=58)
    b=ttk.Combobox(d,state='readonly',width=58)
    a.pack(padx=12,pady=8);b.pack(padx=12,pady=8)
