@@ -1,9 +1,15 @@
 """Model 4: contact trajectories and a two-stage finishing model."""
 import math
 
-from futbol_kurallari import EXEMPT, RulesPitch, offside
+from futbol_kurallari import EXEMPT, RulesPitch, default_role, offside
+from mevkiler import fit_level
 from saha_motoru import clamp
+from taktik import CENTRE_BACKS, FULLBACKS, role_factor, roles_for
+from veritabani import player
 
+ATTACK_RUN={'wingback':.071,'box_to_box':.064,'finisher':.051,'target':.030,'inside_winger':.033}
+PASS_OUTLET={'playmaker':.115,'ball_playing':.086,'target':.073,'dropping':.078,
+             'winger':.043,'inside_winger':.046}
 
 def touchline_crossing(origin, destination):
     x, y = destination
@@ -38,6 +44,137 @@ class CalibratedPitch(RulesPitch):
     def __init__(self, match, seed):
         super().__init__(match, seed)
         self.corner_phase = None
+        self.advanced_regains=[0,0]
+        self.last_regain=(-1,-10)
+        self.position_fit={}
+
+    def role(self,side,pid,position):
+        role=super().role(side,pid,position)
+        if self.m.team_orders is not None:
+            allowed=roles_for(position)
+            if allowed and role not in allowed:
+                return default_role(position) or allowed[0]
+        return role
+
+    def influence(self,pid,position,role):
+        key=pid,position
+        fit=self.position_fit.get(key)
+        if fit is None:
+            fit=self.position_fit[key]=fit_level(player(self.m.s,pid),position)
+        return role_factor(self.m.profiles,pid,role,self.m.player_condition(pid),fit)
+
+    def transition(self,side):
+        owner,minute=self.last_regain
+        return self.m.team_orders[side]['counter'] if owner==side and self.m.minute-minute<=3 else 0
+
+    def target_adjust(self,side,pid,position,x,y):
+        if self.m.team_orders is None:
+            return super().target_adjust(side,pid,position,x,y)
+        direction=1 if side==0 else -1
+        attacking=self.side==side
+        order=self.m.team_orders[side]
+        role=self.role(side,pid,position)
+        factor=self.influence(pid,position,role) if role else 1
+        if position in FULLBACKS or position in CENTRE_BACKS:
+            x+=direction*order['line']*.078
+        elif position in ('DM','CM','AM'):
+            x+=direction*order['line']*.035
+        if attacking:
+            if position in FULLBACKS:
+                x+=direction*order['overlap']*.038*factor
+            if role in ATTACK_RUN:
+                advance=ATTACK_RUN[role]
+                x+=direction*(advance+.022*self.transition(side))*factor
+            elif role in ('defensive_back','dropping','holding'):
+                x-=direction*(.079 if role=='dropping' else .045)*factor
+            elif role in ('playmaker','ball_playing'):
+                x+=(self.ball[0]-x)*.17*factor
+                y+=(self.ball[1]-y)*.17*factor
+            if role=='inside_winger':y+=(.5-y)*.40*factor
+            elif role=='winger':y-=(.5-y)*(.24+.16*self.m.instructions[side][2])*factor
+            y+=direction*order['flank']*.018
+        else:
+            if role=='ball_winner':
+                x+=(self.ball[0]-x)*.19*factor
+                y+=(self.ball[1]-y)*.23*factor
+            if role in ('stopper','defensive_back','holding','box_to_box'):
+                x-=direction*.026*factor
+                if role!='defensive_back':y+=(.5-y)*.14*factor
+        return clamp(x,.05,.95),clamp(y,.055,.945)
+
+    def pass_preference(self,side,target,position):
+        if self.m.team_orders is None:
+            return super().pass_preference(side,target,position)
+        role=self.role(side,target,position)
+        bias=PASS_OUTLET.get(role,0)
+        return bias*self.influence(target,position,role) if bias else 0
+
+    def open_pass_bias(self,side,ty,forward,distance):
+        order=self.m.team_orders[side]
+        width=self.m.instructions[side][2]
+        flank=order['flank']*(1 if side==0 else -1)
+        return (order['passing']*(.72*forward+.29*distance)
+                +self.transition(side)*.55*forward
+                +.33*flank*(ty-.5)+.56*width*(abs(ty-.5)-.12))
+
+    def delivery_adjustment(self,side,target,origin_x,dest,distance):
+        m=self.m
+        rival=1-side
+        direct=m.team_orders[side]['passing']
+        impact=-.12*max(0,distance-.16)*max(0,direct)
+        forward=(dest[0]-origin_x)*(1 if side==0 else -1)
+        space=max(0,m.team_orders[rival]['line']*.65+m.instructions[rival][0]*.35)
+        if distance<.22 and (forward<=.16 or not space):
+            return impact
+        defender=self.nearest(rival,dest,True)
+        if defender is None:
+            return impact
+        profile=m.profiles[target]
+        position=next(role for role,pid in m.slots[side] if pid==target)
+        if distance>=.22 and self.role(side,target,position)=='target':
+            opposing=m.profiles[defender]
+            edge=(profile['Heading']+profile['Strength']-opposing['Heading']-opposing['Strength'])/2
+            impact+=clamp(edge*.012,-.09,.09)
+        if forward>.16 and space:
+            pace=profile['Pace']-m.profiles[defender]['Pace']
+            impact+=space*clamp(.045+pace*.007,0,.09)
+        return impact
+
+    def press_recovery(self):
+        m=self.m
+        side=1-self.side
+        if m.instructions[side][0]<1:
+            return False
+        depth=self.ball[0] if side==0 else 1-self.ball[0]
+        if depth<.48:
+            return False
+        candidates=[]
+        for position,pid in m.slots[side]:
+            if position=='GK':continue
+            distance=math.dist(self.xy[pid],self.ball)
+            if distance<=.135:
+                role=self.role(side,pid,position)
+                bonus=.024 if role=='ball_winner' else 0
+                candidates.append((distance-bonus,pid,distance))
+        if not candidates:
+            return False
+        _,pid,distance=min(candidates)
+        skills=m.profiles[pid]
+        holder=m.profiles[self.owner]
+        duel=(skills['Tackling']+skills['Work rate']-holder['First touch']-holder['Composure'])/2
+        chance=clamp(.23-distance*1.1+duel*.013,.035,.29)*m.player_condition(pid)/100
+        if m.rng.random()>=chance:
+            return False
+        self.win(pid)
+        return True
+
+    def win(self,thief):
+        if self.m.team_orders is not None:
+            side=1-self.side
+            depth=self.ball[0] if side==0 else 1-self.ball[0]
+            if depth>=.58:self.advanced_regains[side]+=1
+            self.last_regain=(side,self.m.minute)
+        super().win(thief)
 
     def frame(self, action=None, ball=None):
         if not self.m.capture:

@@ -1,4 +1,5 @@
 import konumsal
+from taktik import EXTRA, eligible_role
 from saha_motoru import PitchState
 from futbol_kurallari import RulesPitch
 from futbol_kalibrasyonu import CalibratedPitch
@@ -153,6 +154,12 @@ class Match:
         self.positional=s.get('match_model') in (2,3,4)
         self.rules=s.get('match_model') in (3,4)
         self.instructions=[[0,0,0],[0,0,0]]
+        self.team_orders=None
+        if s.get('tactics_model')==1 and s.get('match_model')==4:
+            plans=s.get('tactical_plans',{})
+            self.team_orders=[{key:plans.get(team,{}).get(key,0) for key in EXTRA} for team in (self.a,self.b)]
+            self.instructions=[[plans.get(team,{}).get(key,0) for key in konumsal.KEYS]
+                               for team in (self.a,self.b)]
         self.loads=[0.,0.]
         self.capture=False
         self.frames=[]
@@ -259,6 +266,11 @@ class Match:
             if old==value:return False
             if side==self.human:self.style=value
             else:self.styles[side]=value
+        elif self.team_orders is not None and key in EXTRA:
+            if type(value) is not int or value not in (-1,0,1):return False
+            old=self.team_orders[side][key]
+            if old==value:return False
+            self.team_orders[side][key]=value
         else:
             if key not in konumsal.KEYS or type(value) is not int or value not in (-1,0,1):return False
             i=konumsal.KEYS.index(key)
@@ -273,6 +285,26 @@ class Match:
                 else:row[4]=value
                 return True
         decisions.append([self.minute,side,key,old,value])
+        return True
+
+    def assign_role(self,pid,role):
+        side=self.human
+        if self.team_orders is None or side is None or self.minute>=90:
+            return False
+        position=next((position for position,uid in self.slots[side] if uid==pid),None)
+        if position is None or not eligible_role(player(self.s,pid),position,role):
+            return False
+        old=self.pitch.role(side,pid,position)
+        if old==role:return False
+        self.pitch.role_prefs[side][pid]=role
+        rows=self.analysis.setdefault('role_changes',[])
+        for row in reversed(rows):
+            if row[0]!=self.minute:break
+            if row[2]==pid:
+                if row[3]==role:rows.remove(row)
+                else:row[4]=role
+                return True
+        rows.append([self.minute,side,pid,old,role])
         return True
 
     def positional_step(self):
@@ -310,7 +342,9 @@ class Match:
                     [round(x,2) for x in self.loads],self.score[:]])
         self.pitch.partial_shots=[0,0] if self.minute%5==0 else self.pitch.partial_shots
         self.pitch.partial_recovery=[0,0] if self.minute%5==0 else self.pitch.partial_recovery
-        if self.minute==90 and self.human is not None:self.analysis['flow']=self.pitch.summary()
+        if self.minute==90 and self.human is not None:
+            self.analysis['flow']=self.pitch.summary()
+            if self.team_orders is not None:self.analysis['advanced_regains']=self.pitch.advanced_regains[:]
 
     def step(self):
         if self.positional:return self.positional_step()

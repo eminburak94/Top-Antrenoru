@@ -66,7 +66,7 @@ class PlaybackTests(TestCase):
     def test_controls_fit_a_small_match_window_at_high_tk_scale(self):
         for language in ('TR','EN'):
             with self.subTest(language=language):
-                s=new('GALATASARAY',seed=901,match_model=4)
+                s=new('GALATASARAY',seed=901,match_model=4,tactics_model=True)
                 s['lang']=language
                 root,window=self.start_match(LiveMatch(s),language=language,scale=2.5)
                 try:

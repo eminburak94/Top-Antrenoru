@@ -21,7 +21,7 @@ import is_piyasasi
 SCHEMA_VERSION = 3
 
 def new(club, manager="Menajer", seed=None, unemployed=False, models=True, economy_version=2, match_model=0,
-        transfer_model=False,living_club=False):
+        transfer_model=False,living_club=False,tactics_model=False):
     if club not in TEAMS:
         raise ValueError('Unknown club')
     s = dict(club=club, manager=manager, year=2000, history=[], week=1,
@@ -29,6 +29,7 @@ def new(club, manager="Menajer", seed=None, unemployed=False, models=True, econo
              style='Balanced', cap=99, lang='TR', rng_state=random.Random(seed).getstate(),
              schema_version=SCHEMA_VERSION, attribute_profile=3, position_model=1, lineup_model=1, career_id=uuid4().hex)
     if match_model:s.update(match_model=match_model,match_mode='2d')
+    if tactics_model and match_model==4:s['tactics_model']=1
     if transfer_model:s['transfer_model']=1
     prepare(s)
     personel.setup(s)

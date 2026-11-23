@@ -122,6 +122,18 @@ def validate_preferences(prefs):
 
 def validate_match_options(s):
     from futbol_kurallari import CORNERS,DEFENCE,FREE,ROLES,TAKERS
+    from taktik import OPTIONS,ROLES as TACTICAL_ROLES
+    require(integer(s.get('tactics_model',0),0,1),'Invalid tactical model')
+    if s.get('tactics_model'):
+        require(s.get('match_model')==4,'Invalid tactical engine')
+        ROLES=TACTICAL_ROLES
+    if 'tactical_plans' in s:
+        plans=s['tactical_plans']
+        require(s.get('tactics_model')==1 and isinstance(plans,dict) and set(plans)<=set(TEAMS),
+                'Invalid tactical plans')
+        for row in plans.values():
+            require(isinstance(row,dict) and set(row)<=set(OPTIONS)
+                    and all(integer(v,-1,1) for v in row.values()),'Invalid tactical order')
     for key in ('set_pieces','player_roles'):
         values=s.get(key,{})
         require(isinstance(values,dict) and set(values)<=set(TEAMS),'Invalid tactic clubs')
@@ -295,9 +307,27 @@ def validate_manager(s):
                     and all(isinstance(pair,list) and len(pair)==2
                             and all(type(value) in (float,int) and 0<=value<=100 for value in pair)
                             for pair in row[1:]),'Invalid match period')
+        from taktik import EXTRA
+        keys=('press','tempo','width','style')+(EXTRA if s.get('tactics_model') else ())
         for row in audit['decisions']:
             require(isinstance(row,list) and len(row)==5 and integer(row[0],0,89 if s.get('match_model') in (2,3,4) else 85) and integer(row[1],0,1)
-                    and row[2] in ('press','tempo','width','style'),'Invalid match instruction')
+                    and row[2] in keys,'Invalid match instruction')
+            if row[2] in EXTRA:
+                require(all(integer(v,-1,1) for v in row[3:]),'Invalid live tactical order')
+        if 'advanced_regains' in audit:
+            rows=audit['advanced_regains']
+            require(s.get('tactics_model')==1 and isinstance(rows,list) and len(rows)==2
+                    and all(integer(v,0,90) for v in rows),'Invalid advanced recoveries')
+        if 'role_changes' in audit:
+            from taktik import ROLES
+            rows=audit['role_changes']
+            require(s.get('tactics_model')==1 and isinstance(rows,list) and len(rows)<=990,
+                    'Invalid role changes')
+            players=catalog(s)
+            for row in rows:
+                require(isinstance(row,list) and len(row)==5 and integer(row[0],0,89)
+                        and integer(row[1],0,1) and isinstance(row[2],str) and row[2] in players
+                        and row[3] in ROLES and row[4] in ROLES,'Invalid role change')
         if 'chances' in audit:
             chances=audit['chances']
             players=catalog(s)
@@ -610,7 +640,7 @@ def load_game(path):
 
 def user_directory():
     local=os.environ.get('LOCALAPPDATA')
-    return (Path(local) if local else Path.home()) / 'TopAntrenoru' / 'v0.9.2'
+    return (Path(local) if local else Path.home()) / 'TopAntrenoru' / 'v0.9.3'
 
 
 def autosave(s, directory=None):

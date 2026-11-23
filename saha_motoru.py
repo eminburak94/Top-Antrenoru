@@ -129,6 +129,8 @@ class PitchState:
             if m.rules:
                 quality+=self.pass_preference(side,target,role)+max(0,forward)*.21
                 if (tx if side==0 else 1-tx)>legal_line+.000001:quality-=.21
+            if m.team_orders is not None and forced is None and restart is None:
+                quality+=self.open_pass_bias(side,ty,forward,distance)
             candidates.append((quality,target,distance))
         if not candidates:
             self.carry(pressure)
@@ -138,7 +140,9 @@ class PitchState:
         dest=self.xy[target]
         if m.rules:self.last_kicker=pid
         passing=m.profiles[pid]['Passing']
-        threshold=clamp(.91+.016*(passing-10)-.32*distance-.20*pressure, .25,.96)
+        difficulty=(self.delivery_adjustment(side,target,x,dest,distance)
+                    if m.team_orders is not None and forced is None and restart is None else 0)
+        threshold=clamp(.91+.016*(passing-10)-.32*distance-.20*pressure+difficulty, .25,.96)
         self.owner=None
         self.ball=((x+dest[0])*.5,(y+dest[1])*.5)
         self.frame()
@@ -275,6 +279,9 @@ class PitchState:
         self.frame()
         if self.restart:
             self.restart_play()
+        elif m.team_orders is not None and self.owner is not None and self.press_recovery():
+            self.frame()
+            return
         elif self.owner is not None:
             side=self.side
             self.counters['possession'][side]+=1

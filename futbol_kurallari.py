@@ -47,7 +47,7 @@ class RulesPitch(PitchState):
         super().__init__(match)
         self.referee=Referee.assign(seed)
         self.prefs=[match.s.get('set_pieces',{}).get(team,{}) for team in (match.a,match.b)]
-        self.role_prefs=[match.s.get('player_roles',{}).get(team,{}) for team in (match.a,match.b)]
+        self.role_prefs=[match.s.get('player_roles',{}).get(team,{}).copy() for team in (match.a,match.b)]
         self.signal=None
         self.set_piece=None
         self.wall=()
