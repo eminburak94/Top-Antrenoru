@@ -21,6 +21,8 @@ def game():
     return new('GALATASARAY',seed=800,models=False)
 
 
+from test_fixtures import legacy_source
+
 class StaffTests(unittest.TestCase):
     def test_contract_limit_expiry_and_single_owner(self):
         s=game()
@@ -169,8 +171,8 @@ class StaffTests(unittest.TestCase):
         self.assertTrue(st.release(s,team,pid))
         self.assertIsNone(st.assigned(s,team,'lineup'))
 
-    def test_legacy_and_live_equivalence(self):
-        source=Path(__file__).resolve().parent/'yedek_v0.7.9.3'
+    def test_legacy_equivalence(self):
+        source=legacy_source(self, 'yedek_v0.7.9.3')
         script="""from kariyer import new,advance
 from kayit import encode
 s=new('GALATASARAY',seed=800)
@@ -182,6 +184,8 @@ print(encode(s));advance(s);print(encode(s))
         self.assertNotIn('staff_system',old)
         advance(old)
         self.assertEqual(json.loads(expected),json.loads(encode(old)))
+
+    def test_staff_live_equivalence(self):
         s=game()
         a=decode(encode(s))
         self.assertTrue(st.start_scout(s,'29663'))

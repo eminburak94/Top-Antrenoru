@@ -13,6 +13,8 @@ from mevkiler import LAYOUTS, coordinates, fit_level, label
 from veritabani import player
 
 
+from test_fixtures import legacy_source
+
 class PositionTests(unittest.TestCase):
     def test_six_formations_and_manual_roundtrip(self):
         s=new('GALATASARAY',seed=792)
@@ -49,7 +51,7 @@ class PositionTests(unittest.TestCase):
 
     def test_legacy_engine_matches_backup(self):
         import json
-        source=Path(__file__).resolve().parent/'yedek_v0.7.9.1'
+        source=legacy_source(self, 'yedek_v0.7.9.1')
         code="""import json
 from dataclasses import asdict
 from kariyer import new

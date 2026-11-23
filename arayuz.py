@@ -52,7 +52,7 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews):
  def menu(self):
   for item in self.nav.winfo_children():item.destroy()
   tr=self.tr
-  self.button(self.nav,'Ana sayfa','Home',self.dashboard).pack(side='left',padx=2)
+  self.button(self.nav,'Ana sayfa','Home',self.dashboard)
   groups=[
    ('Takım','Team',[('Kadro','Squad',self.squad),('Taktik','Tactics',self.tactics),
                    (*TEXT['staff_title'],self.staff_page)]),
@@ -64,12 +64,12 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews):
                     ('Oyuncu istatistikleri','Player statistics',self.scorers)]),
    ('Kariyer','Career',[('Menajer geçmişi','Career record',self.career_page),('İş piyasası','Job market',self.jobs_page),
                       ('Kaydet','Save',self.save),('Yükle','Load',self.load),('TR / EN','TR / EN',self.switch)])]
-  from tema import MenuButton
+  from tema import MenuButton,wrap_controls
   for a,b,entries in groups:
-   control=MenuButton(self.nav,tr(a,b),[(tr(left,right),callback) for left,right,callback in entries])
-   control.pack(side='left',padx=2)
-  self.button(self.nav,'Gündem','Inbox',self.inbox_page).pack(side='left',padx=4)
-  ttk.Button(self.nav,text=tr('Devam','Continue'),style='Accent.TButton',command=self.next).pack(side='right')
+   MenuButton(self.nav,tr(a,b),[(tr(left,right),callback) for left,right,callback in entries])
+  self.button(self.nav,'Gündem','Inbox',self.inbox_page)
+  ttk.Button(self.nav,text=tr('Devam','Continue'),style='Accent.TButton',command=self.next)
+  wrap_controls(self.nav)
   self.header()
  def dashboard(self):
   if 'manager_state' in self.s and not self.s['employed']:return self.employment_page()
@@ -113,8 +113,15 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews):
    card.grid(row=i//2,column=i%2,sticky='nsew',padx=4,pady=4)
    ttk.Label(card,text=title,style='DeskTitle.TLabel').pack(anchor='w')
    ttk.Label(card,text=message,style='DeskBody.TLabel',wraplength=385).pack(anchor='w',pady=(3,5))
-   bar=ttk.Frame(card,style='Desk.TFrame');bar.pack(anchor='w')
-   for a,b,callback in links:self.button(bar,a,b,callback).pack(side='left',padx=(0,4))
+   bar=ttk.Frame(card,style='Desk.TFrame')
+   if len(links)>2:
+    from tema import wrap_controls
+    bar.pack(fill='x')
+    for a,b,callback in links:self.button(bar,a,b,callback)
+    wrap_controls(bar)
+   else:
+    bar.pack(anchor='w')
+    for a,b,callback in links:self.button(bar,a,b,callback).pack(side='left',padx=(0,4))
    return bar
   panel(0,tr('Sıradaki maç','Next match'),match_text,[('Maça hazırlan','Prepare match',self.preparation)])
   panel(1,tr('Takım durumu','Squad status'),

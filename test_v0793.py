@@ -15,6 +15,8 @@ from oyuncu import attributes, state
 from veritabani import player, roster
 
 
+from test_fixtures import legacy_source
+
 class CalibrationTests(unittest.TestCase):
     def test_assignment_avoids_consuming_only_centre_back(self):
         roles=['RB','CB']
@@ -73,7 +75,7 @@ class CalibrationTests(unittest.TestCase):
             m.profiles[p['id']][field]+=1
             self.assertGreater(m.strength([(role,p['id'])])[group],p0)
 
-    def test_both_legacy_modes_and_new_rng(self):
+    def test_both_legacy_modes(self):
         root=Path(__file__).resolve().parent
         script="""from kariyer import new,advance
 from kayit import encode
@@ -84,10 +86,12 @@ print(encode(s))
 """
         for ver in ('v0.7.9.1','v0.7.9.2'):
             before,after=subprocess.check_output([sys.executable,'-B','-X','utf8','-c',script],
-                  cwd=root/f'yedek_{ver}',encoding='utf8').splitlines()
+                  cwd=legacy_source(self, f'yedek_{ver}', root=root),encoding='utf8').splitlines()
             s=decode(before)
             advance(s)
             self.assertEqual(json.loads(encode(s)),json.loads(after))
+
+    def test_new_rng(self):
         x=new('GALATASARAY',seed=793)
         y=decode(encode(x))
         advance(x)

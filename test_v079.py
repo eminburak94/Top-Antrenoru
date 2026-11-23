@@ -19,6 +19,8 @@ def young(s):
     return next(p for p in roster(s['club'],s['year'],s) if age_at(p,s['year'],1)<25)
 
 
+from test_fixtures import legacy_source
+
 class TrainingTests(unittest.TestCase):
     def test_focus_intensity_recovery_and_injury_ab(self):
         s=new('GALATASARAY',seed=1)
@@ -68,7 +70,7 @@ class TrainingTests(unittest.TestCase):
     def test_old_save_month_dedup_and_live_parity(self):
         code="from kariyer import new; from kayit import encode; print(encode(new('GALATASARAY',seed=3)))"
         raw=subprocess.check_output([sys.executable,'-X','utf8','-B','-c',code],
-                                     cwd=ROOT/'yedek_v0.7.8',encoding='utf8')
+                                     cwd=legacy_source(self, 'yedek_v0.7.8', root=ROOT),encoding='utf8')
         s=decode(raw)
         pid=young(s)['id']
         s['individual_training']={pid:['technical','light']}

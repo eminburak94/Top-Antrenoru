@@ -16,6 +16,8 @@ def career(model=4, seed=813):
     return new('GALATASARAY', seed=seed, match_model=model)
 
 
+from test_fixtures import legacy_source
+
 class CalibrationTests(TestCase):
     def test_touchline_crossing_and_last_touch(self):
         self.assertEqual(touchline_crossing((.3,.2),(.7,-.2)),(.5,0))
@@ -66,7 +68,7 @@ class CalibrationTests(TestCase):
             p.shoot()
         self.assertTrue(any(row[3]=='set_piece_goal' for row in m.play))
 
-    def test_capture_matches_quick_and_old_models_round_trip(self):
+    def test_capture_matches_quick(self):
         initial=encode(career())
         a,b=decode(initial),decode(initial)
         advance(a)
@@ -75,7 +77,9 @@ class CalibrationTests(TestCase):
         m.finish()
         self.assertTrue(m.commit())
         self.assertEqual(json.loads(encode(a)),json.loads(encode(b)))
-        src=Path(__file__).resolve().parent.parent/'top ant v0.8.6'
+
+    def test_old_models_round_trip(self):
+        src=legacy_source(self, 'top ant v0.8.6', sibling=True)
         for model in (1,2,3):
             script=f"from kariyer import new,advance;from kayit import encode;s=new('GALATASARAY',seed=813,match_model={model});print(encode(s));advance(s);print(encode(s))"
             before,after=subprocess.check_output([sys.executable,'-B','-X','utf8','-c',script],

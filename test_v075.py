@@ -22,6 +22,8 @@ from yarisma import standings
 
 ROOT=Path(__file__).resolve().parent
 
+from test_fixtures import legacy_source
+
 class Generations(unittest.TestCase):
     def test_import_and_dates(self):
         self.assertEqual(len(P),606)
@@ -40,7 +42,7 @@ class Generations(unittest.TestCase):
 
     def test_old_save_bonus_once(self):
         script="import kariyer as k; from kayit import encode; s=k.new('GALATASARAY',seed=6); k.advance(s); print(encode(s))"
-        raw=subprocess.check_output([sys.executable,'-B','-c',script],cwd=ROOT/'yedek_v0.7.0',
+        raw=subprocess.check_output([sys.executable,'-B','-c',script],cwd=legacy_source(self, 'yedek_v0.7.0', root=ROOT),
                  encoding='utf8',env={**os.environ,'PYTHONUTF8':'1'})
         old=json.loads(raw);s=decode(raw)
         self.assertEqual(old['schema_version'],2)

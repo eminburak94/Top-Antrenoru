@@ -111,3 +111,32 @@ class MenuButton(ttk.Button):
             w.destroy()
             self.focus_set()
         return 'break'
+
+
+def wrap_controls(frame):
+    """Wrap controls without grid propagation changing the measured width."""
+    frame.grid_propagate(False)
+    padding=frame.cget('padding')
+    inset=2*frame.winfo_pixels(padding[0]) if padding else 0
+    previous=None
+
+    def arrange(event=None):
+        nonlocal previous
+        widgets=frame.winfo_children()
+        if not widgets:
+            return
+        cell_width=max(w.winfo_reqwidth() for w in widgets)+4
+        cell_height=max(w.winfo_reqheight() for w in widgets)+2
+        columns=max(1,((event.width-inset)//cell_width if event else len(widgets)))
+        layout=(columns,cell_height)
+        if previous==layout:
+            return
+        previous=layout
+        for index,widget in enumerate(widgets):
+            row,column=divmod(index,columns)
+            widget.grid(row=row,column=column,sticky='w',padx=2,pady=1)
+        rows=(len(widgets)+columns-1)//columns
+        frame.configure(height=rows*cell_height+inset)
+
+    frame.bind('<Configure>',arrange)
+    arrange()

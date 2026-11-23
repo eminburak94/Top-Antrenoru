@@ -24,16 +24,12 @@ from yerellestirme import citizenship_ids, country_label, is_domestic, position_
 
 CLUBS = ('GALATASARAY', 'YİMPAŞ YOZGATSPOR', 'ERZURUMSPOR')
 
+from test_fixtures import legacy_source
+
 class Regression(unittest.TestCase):
     def test_dataset(self):
         self.assertEqual((len(P), len(TEAMS)), (606, 18))
         self.assertEqual(len(D['matches']), 306)
-        raw = json.loads(Path('yedek_v0.5.5/data.json').read_text(encoding='utf8'))
-        self.assertEqual(raw['matches'], D['matches'])
-        self.assertEqual(raw['teams'], D['teams'])
-        self.assertEqual(raw['players'], [
-            {key: val for key, val in p.items() if key != 'citizenships'} for p in P.values()
-        ])
         self.assertTrue(all(m['score'][1] == 0 for m in D['matches']))
         self.assertTrue(all(set(m) == {'week','home','away'} for m in schedule(2000)))
         with Path('TARIHSEL_SKOR_DOGRULAMA.csv').open(encoding='utf-8-sig') as f:
@@ -47,6 +43,14 @@ class Regression(unittest.TestCase):
         self.assertEqual(country_label('TR','EN'), 'Turkey')
         self.assertEqual(position_label('GK','TR'), 'Kaleci')
         self.assertEqual(position_label('GK','EN'), 'Goalkeeper')
+
+    def test_dataset_matches_archive(self):
+        raw = json.loads((legacy_source(self, 'yedek_v0.5.5')/'data.json').read_text(encoding='utf8'))
+        self.assertEqual(raw['matches'], D['matches'])
+        self.assertEqual(raw['teams'], D['teams'])
+        self.assertEqual(raw['players'], [
+            {key: val for key, val in p.items() if key != 'citizenships'} for p in P.values()
+        ])
 
     def test_mode_parity(self):
         for club in CLUBS:
@@ -148,7 +152,7 @@ class Regression(unittest.TestCase):
                 decode(json.dumps(data))
 
     def test_legacy_v055(self):
-        old = runpy.run_path('yedek_v0.5.5/oyun.py')
+        old = runpy.run_path(str(legacy_source(self, 'yedek_v0.5.5')/'oyun.py'))
         random.seed(90)
         original = old['prepare'](old['new'](CLUBS[0]))
         original['year'] = 2006

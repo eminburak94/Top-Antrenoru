@@ -20,6 +20,8 @@ GS = 'GALATASARAY'
 SMALL = 'ERZURUMSPOR'
 
 
+from test_fixtures import legacy_source
+
 class CareerTests(unittest.TestCase):
     def setUp(self):
         self.s = new(GS, seed=811)
@@ -122,7 +124,7 @@ class CareerTests(unittest.TestCase):
         for version in ('0.7.9.1','0.7.9.2','0.7.9.3','0.8.0'):
             with self.subTest(version=version):
                 raw = subprocess.check_output([sys.executable,'-B','-X','utf8','-c',script],
-                     cwd=root/f'yedek_v{version}',encoding='utf-8').splitlines()
+                     cwd=legacy_source(self, f'yedek_v{version}', root=root),encoding='utf-8').splitlines()
                 s = decode(raw[0])
                 self.assertNotIn('economy_model',s)
                 self.assertNotIn('manager_state',s)

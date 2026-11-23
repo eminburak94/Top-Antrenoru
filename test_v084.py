@@ -22,6 +22,8 @@ def widgets(root,kind):
         yield from widgets(child,kind)
 
 
+from test_fixtures import legacy_source
+
 class DesktopTests(unittest.TestCase):
     def setUp(self):
         self.root=tk.Tk()
@@ -114,7 +116,7 @@ class ModelTests(unittest.TestCase):
         self.assertEqual(before,match.rng.getstate())
 
     def test_v083_save_load_and_new_preferences(self):
-        previous=Path(__file__).resolve().parent.parent/'top ant v0.8.3'
+        previous=legacy_source(self, 'top ant v0.8.3', sibling=True)
         code="from kariyer import new; from kayit import encode; print(encode(new('GALATASARAY',seed=813,match_model=1)))"
         raw=subprocess.check_output([sys.executable,'-B','-X','utf8','-c',code],cwd=previous,encoding='utf-8')
         restored=decode(raw)

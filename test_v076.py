@@ -39,6 +39,8 @@ def report(name,head,rows):
     with (ROOT/name).open('w',encoding='utf-8-sig',newline='') as stream:
         out=csv.writer(stream);out.writerow(head.split());out.writerows(rows)
 
+from test_fixtures import legacy_source
+
 class Economy(unittest.TestCase):
     def test_currency_invariant(self):
         base=new('GALATASARAY',seed=761)
@@ -78,17 +80,19 @@ class Economy(unittest.TestCase):
         self.assertEqual(ledger['borrowed'],ledger['repaid'])
 
     def test_preserved_database_and_scores(self):
-        self.assertEqual((ROOT/'data.json').read_bytes(),(ROOT/'yedek_v0.7.5'/'data.json').read_bytes())
         self.assertEqual(len(D['players'])+len(HISTORICAL),619)
         scores=json.loads((ROOT/'tarihsel_skorlar.json').read_text(encoding='utf8'))
         self.assertEqual(scores['20642']['score'],[0,4])
         self.assertEqual(len(scores),306)
         self.assertTrue(all(k in HISTORICAL for k in ('673538','1723820')))
 
+    def test_dataset_matches_archive(self):
+        self.assertEqual((ROOT/'data.json').read_bytes(),(legacy_source(self, 'yedek_v0.7.5', root=ROOT)/'data.json').read_bytes())
+
     def test_v075_saved_career(self):
         code=("from kariyer import new,advance; from kayit import encode; "
               "s=new('GALATASARAY',seed=76); [advance(s) for _ in range(36)]; print(encode(s))")
-        raw=subprocess.check_output([sys.executable,'-B','-c',code],cwd=ROOT/'yedek_v0.7.5',
+        raw=subprocess.check_output([sys.executable,'-B','-c',code],cwd=legacy_source(self, 'yedek_v0.7.5', root=ROOT),
                                     encoding='utf8',env={**os.environ,'PYTHONUTF8':'1'})
         old=json.loads(raw);current=decode(raw)
         for field in ('rng_state','owners','generated','results','season_stats','year','week'):

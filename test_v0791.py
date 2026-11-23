@@ -17,6 +17,8 @@ from yarisma import opening_date, window
 ROOT=Path(__file__).resolve().parent
 
 
+from test_fixtures import legacy_source
+
 class TesterFixes(unittest.TestCase):
     def test_tactics_reaches_motor_after_reload(self):
         s=new('GALATASARAY',seed=19)
@@ -66,7 +68,7 @@ print(json.dumps(attributes(s,player(s,'29663'))))
 """
         import json
         raw, expected=subprocess.check_output([sys.executable,'-X','utf8','-B','-c',code],
-                                     cwd=ROOT/'yedek_v0.7.9',encoding='utf8').splitlines()
+                                     cwd=legacy_source(self, 'yedek_v0.7.9', root=ROOT),encoding='utf8').splitlines()
         s=decode(raw)
         self.assertNotIn('attribute_profile',s)
         self.assertEqual(attributes(s,player(s,'29663')),json.loads(expected))

@@ -44,3 +44,28 @@ class SaveSafety(TestCase):
             self.assertEqual(path.read_bytes(),first)
             self.assertEqual(backup_path(path).read_bytes(),first)
             self.assertFalse(list(path.parent.glob('*.tmp')))
+
+    def test_shipped_synthetic_legacy_saves_round_trip_and_continue(self):
+        import gzip
+        import json
+        from kariyer import advance
+        fixture=Path(__file__).with_name('testdata')/'schema3-synthetic.json.gz'
+        with gzip.open(fixture,'rt',encoding='utf8') as stream:
+            cases=json.load(stream)
+        self.assertEqual({(d['source'],d['model']) for d in cases},
+                         {('0.8.6',m) for m in (1,2,3)}|{('0.8.7',m) for m in (1,2,3,4)})
+        for case in cases:
+            with self.subTest(version=case['source'],model=case['model']), TemporaryDirectory() as tmp:
+                source=Path(tmp)/'original.json'
+                dest=Path(tmp)/'resaved.json'
+                original=json.dumps(case['save'],ensure_ascii=False).encode('utf8')
+                source.write_bytes(original)
+                a=load_game(source)
+                save_game(a,dest)
+                b=load_game(dest)
+                self.assertEqual(source.read_bytes(),original)
+                self.assertEqual((a['schema_version'],a['match_model'],a['week']),(3,case['model'],2))
+                self.assertEqual(encode(a),encode(b))
+                self.assertTrue(advance(a))
+                self.assertTrue(advance(b))
+                self.assertEqual(encode(a),encode(b))

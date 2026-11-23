@@ -17,6 +17,8 @@ from yonetim import squad_review
 ROOT = Path(__file__).resolve().parent
 
 
+from test_fixtures import legacy_source
+
 class ManagementTests(unittest.TestCase):
     def test_weekly_actual_values_and_live_parity(self):
         s = new('GALATASARAY', seed=72)
@@ -60,7 +62,7 @@ advance(s)
 print(encode(s))
 """
         raw, expected = subprocess.check_output([sys.executable,'-X','utf8','-B','-c',code],
-                           cwd=ROOT/'yedek_v0.7.7',encoding='utf8').splitlines()
+                           cwd=legacy_source(self, 'yedek_v0.7.7', root=ROOT),encoding='utf8').splitlines()
         with tempfile.TemporaryDirectory() as temp:
             path=Path(temp)/'isolated.json'
             path.write_text(raw,encoding='utf8')

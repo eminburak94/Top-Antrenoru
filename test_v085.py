@@ -26,6 +26,8 @@ def widgets(parent,kind):
         yield from widgets(child,kind)
 
 
+from test_fixtures import legacy_source
+
 class PitchTests(unittest.TestCase):
     def test_pass_chain_restarts_shots_and_coordinates(self):
         observed=set()
@@ -107,7 +109,7 @@ class PitchTests(unittest.TestCase):
         self.assertEqual(decode(encode(m.career))['match_model'],2)
 
     def test_v084_replay_exactly_matches(self):
-        folder=Path(__file__).resolve().parent.parent/'top ant v0.8.4'
+        folder=legacy_source(self, 'top ant v0.8.4', sibling=True)
         cmd=("from kariyer import new,advance; from kayit import encode; "
              "s=new('GALATASARAY',seed=813,match_model=1); print(encode(s)); advance(s); print(encode(s))")
         source,expected=subprocess.check_output([sys.executable,'-B','-X','utf8','-c',cmd],cwd=folder,encoding='utf-8').splitlines()

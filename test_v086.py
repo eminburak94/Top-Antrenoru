@@ -17,6 +17,8 @@ def game(seed=813):
     return new('GALATASARAY',seed=seed,match_model=3)
 
 
+from test_fixtures import legacy_source
+
 class FixedRandom:
     def random(self):return 0
 
@@ -138,7 +140,7 @@ class RulesTests(unittest.TestCase):
         self.assertEqual(json.loads(encode(a)),json.loads(encode(b)))
 
     def test_model_one_and_two_replay_same_week(self):
-        folder=Path(__file__).resolve().parent.parent/'top ant v0.8.5'
+        folder=legacy_source(self, 'top ant v0.8.5', sibling=True)
         for model in (1,2):
             cmd=("from kariyer import new,advance; from kayit import encode; "
                  f"s=new('GALATASARAY',seed=813,match_model={model}); print(encode(s)); advance(s); print(encode(s))")

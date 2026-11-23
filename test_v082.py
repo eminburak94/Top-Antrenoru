@@ -19,6 +19,8 @@ CLUB='GALATASARAY'
 SMALL='ERZURUMSPOR'
 
 
+from test_fixtures import legacy_source
+
 class DynamicEconomy(unittest.TestCase):
     def test_period_indices_are_deterministic_distinct_and_bounded(self):
         self.assertEqual({donem.index(2000,key) for key in donem.LIMITS},{1})
@@ -50,7 +52,7 @@ class DynamicEconomy(unittest.TestCase):
     def test_v081_file_replays_without_switching_economy(self):
         import subprocess
         import sys
-        folder=Path(__file__).resolve().parent.parent/'top ant tester v0.8.1'
+        folder=legacy_source(self, 'top ant tester v0.8.1', sibling=True)
         source=("from kariyer import new,advance; from kayit import encode; "
                 "s=new('GALATASARAY',seed=811); print(encode(s)); "
                 "advance(s); print(encode(s))")

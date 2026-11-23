@@ -34,6 +34,8 @@ def generous(s,p,team):
     terms['wage']=round(terms['wage']*1.34)
     return terms
 
+from test_fixtures import legacy_source
+
 class WorldTests(unittest.TestCase):
     def test_contract_and_budgets(self):
         s=k.new(GS,seed=1,models=False)
@@ -159,7 +161,7 @@ class WorldTests(unittest.TestCase):
     def test_v060_original_save(self):
         raw=subprocess.check_output([sys.executable,'-B','-c',
              "import kariyer as k; from kayit import encode; s=k.new('GALATASARAY',seed=8); k.advance(s); print(encode(s))"],
-             cwd=ROOT/'yedek_v0.6.0',encoding='utf8',env={**os.environ,'PYTHONUTF8':'1'})
+             cwd=legacy_source(self, 'yedek_v0.6.0', root=ROOT),encoding='utf8',env={**os.environ,'PYTHONUTF8':'1'})
         old=json.loads(raw)
         upgraded=decode(raw)
         self.assertEqual(old['schema_version'],1)
@@ -202,9 +204,11 @@ class WorldTests(unittest.TestCase):
             root.destroy()
 
     def test_data_unchanged(self):
-        self.assertEqual((ROOT/'data.json').read_bytes(),(ROOT/'yedek_v0.6.0'/'data.json').read_bytes())
         self.assertEqual(len(P),606)
         self.assertEqual(len(TEAMS),18)
+
+    def test_dataset_matches_archive(self):
+        self.assertEqual((ROOT/'data.json').read_bytes(),(legacy_source(self, 'yedek_v0.6.0', root=ROOT)/'data.json').read_bytes())
 
     @unittest.skipUnless('--long' in sys.argv,'use --long')
     def test_twenty_five_seasons(self):
