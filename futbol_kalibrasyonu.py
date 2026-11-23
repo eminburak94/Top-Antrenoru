@@ -49,19 +49,23 @@ class CalibratedPitch(RulesPitch):
         self.position_fit={}
 
     def role(self,side,pid,position):
-        role=super().role(side,pid,position)
-        if self.m.team_orders is not None:
-            allowed=roles_for(position)
-            if allowed and role not in allowed:
-                return default_role(position) or allowed[0]
-        return role
+        if self.m.team_orders is None:
+            return super().role(side,pid,position)
+        allowed=roles_for(position)
+        preferred=self.role_prefs[side].get(pid)
+        if preferred in allowed and self.slot_fit(pid,position)>=1:
+            return preferred
+        return default_role(position) or (allowed[0] if allowed else None)
 
-    def influence(self,pid,position,role):
+    def slot_fit(self,pid,position):
         key=pid,position
         fit=self.position_fit.get(key)
         if fit is None:
             fit=self.position_fit[key]=fit_level(player(self.m.s,pid),position)
-        return role_factor(self.m.profiles,pid,role,self.m.player_condition(pid),fit)
+        return fit
+
+    def influence(self,pid,position,role):
+        return role_factor(self.m.profiles,pid,role,self.m.player_condition(pid),self.slot_fit(pid,position))
 
     def transition(self,side):
         owner,minute=self.last_regain

@@ -15,16 +15,17 @@ RIVAL='FENERBAHÇE'
 SMALL='ERZURUMSPOR'
 
 
-def measure(seed,mode=None,value=None,away=RIVAL,enabled=True,capture=True):
-    s=new(HOME,seed=9300,match_model=4,tactics_model=enabled)
+def measure(seed,mode=None,value=None,away=RIVAL,enabled=True,capture=True,*,home=HOME,formation='4-4-2'):
+    s=new(home,seed=9300,match_model=4,tactics_model=enabled)
+    s['formation']=formation
     if mode=='fitness':
-        for p in roster(HOME,s['year'],s):
+        for p in roster(home,s['year'],s):
             state(s,p)['condition']=value
-    m=Match(s,{'home':HOME,'away':away},seed)
+    m=Match(s,{'home':home,'away':away},seed)
     m.capture=capture
-    back=next(pid for position,pid in m.slots[0] if position=='RB')
+    position,back=next((position,pid) for position,pid in m.slots[0] if position in ('RB','RWB'))
     if mode=='role':
-        assert m.assign_role(back,value) or m.pitch.role(0,back,'RB')==value
+        assert m.assign_role(back,value) or m.pitch.role(0,back,position)==value
     elif mode and mode not in ('fitness','live'):
         assert m.instruction(mode,value)
     fullback=[]
@@ -39,7 +40,7 @@ def measure(seed,mode=None,value=None,away=RIVAL,enabled=True,capture=True):
             fullback.append(m.pitch.xy[back][0])
     if not capture:
         return m
-    own=[row for row in m.pitch.trace if s['owners'][row['player']]==HOME]
+    own=[row for row in m.pitch.trace if s['owners'][row['player']]==home]
     delivered={(minute,pid,target) for minute,side,pid,event,target in m.play if side==0 and event=='pass'}
     completed=[row for row in own if (row['minute'],row['player'],row['target']) in delivered]
     failed=sum(row[3]=='pass_failed' and row[1]==0 for row in m.play)
@@ -54,9 +55,9 @@ def measure(seed,mode=None,value=None,away=RIVAL,enabled=True,capture=True):
     )
 
 
-def compare(mode,a,b,columns):
+def compare(mode,a,b,columns,**fixture):
     def group(value):
-        rows=[measure(seed,mode,value) for seed in SEEDS]
+        rows=[measure(seed,mode,value,**fixture) for seed in SEEDS]
         return {key:round(mean(row[key] for row in rows),2) for key in columns}
     print(mode,a,group(a),b,group(b))
 
@@ -71,6 +72,14 @@ if __name__=='__main__':
     matches=[measure(seed,away=SMALL) for seed in SEEDS]
     print('strong vs small', {k:round(mean(row[k] for row in matches),2)
                                for k in ('goals','conceded','shots')})
+    for home,away,formation in (('TRABZONSPOR','BEŞİKTAŞ','4-3-3'),
+                                ('ERZURUMSPOR','GAZİANTEPSPOR','5-3-2')):
+        print(home,away,formation)
+        fixture=dict(home=home,away=away,formation=formation)
+        compare('press',-1,1,('regains','fitness','shots','conceded'),**fixture)
+        compare('width',-1,1,('wide','shots','conceded'),**fixture)
+        compare('passing',-1,1,('pass_m','failed','shots','conceded'),**fixture)
+        compare('role','defensive_back','wingback',('back','shots','conceded'),**fixture)
     for enabled in (False,True):
         start=perf_counter()
         for seed in SEEDS:

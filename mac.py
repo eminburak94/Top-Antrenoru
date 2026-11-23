@@ -511,6 +511,11 @@ class Match:
             if isinstance(self.pitch, CalibratedPitch) and not self.pitch.settle_substitution(side, outid):
                 return False
             slots[index] = (replacement, inid)
+            if self.team_orders is not None and len(slots)<11 and replacement==role:
+                anchors=self.pitch.anchor[side]
+                if outid in anchors:
+                    # The reduced formation keeps its remaining slots when a player changes.
+                    anchors[inid]=self.pitch.xy[inid]=anchors.pop(outid)
             self.used.add(inid)
             self.team_subs[side]+=1
             if side==self.human or not self.positional:self.subs+=1
