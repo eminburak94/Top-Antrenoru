@@ -33,7 +33,7 @@ def formation_coverage(s):
 class RecruitmentViews:
     def scouting_age(self,report):
         from personel import week_key
-        weeks=max(0,week_key(self.s)-(report['year']*34+report['week']+1))
+        weeks=max(0,week_key(self.s)-(report['year']*34+report['week']))
         return self.tr('Rapor {year}/{week} · {age} hafta önce · Güven {confidence}/20',
                        'Report {year}/{week} · {age} weeks ago · Confidence {confidence}/20').format(
                            **report,age=weeks)
