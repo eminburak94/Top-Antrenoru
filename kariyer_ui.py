@@ -47,6 +47,8 @@ class CareerViews:
             rows.append((team,f'{year}/{week+1}',msg('job_'+v['reason']),v['required'],v['target'],
                          msg('job_'+a['status']) if a else msg('job_opening'),f'{end_y}/{end_w+1}'))
         ttk.Label(self.body,text=msg('job_market_title')).pack(anchor='w')
+        if s.get('match_model',0)==4:
+            ttk.Label(self.body,text=msg('job_score',score=jobs.application_score(s))).pack(anchor='w')
         table=self.tree([msg(key) for key in columns],rows,wide=True)
         def action(mode):
             if not table.selection():return

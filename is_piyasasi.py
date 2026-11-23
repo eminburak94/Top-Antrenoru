@@ -48,9 +48,18 @@ def application(s,team):
 def apply(s,team):
     vacancy_row=s['manager_state']['vacancies'].get(team)
     if not vacancy_row or clock(s)>=vacancy_row['closes'] or application(s,team):return False
+    if s.get('match_model',0)==4 and clock(s)+1>=vacancy_row['closes']:
+        return False
     s['manager_state']['applications'].append(dict(team=team,opened=vacancy_row['opened'],
            status='pending',due=clock(s)+1,expires=None,reason=None))
     return True
+
+
+def application_score(s):
+    spells=s['manager_state']['spells']
+    track=min(8,sum(row['stats']['w'] for row in spells)//6)
+    fiscal=4 if any(row['reason']=='financial' for row in spells[-2:]) else 0
+    return s['manager_rep']+track-fiscal
 
 
 def resolve(s):
@@ -59,10 +68,9 @@ def resolve(s):
     for team,opening in list(m['vacancies'].items()):
         app=application(s,team)
         if app and app['status']=='pending' and now>=app['due']:
-            spells=m['spells']
-            track=min(8,sum(row['stats']['w'] for row in spells)//6)
-            fiscal=4 if any(row['reason']=='financial' for row in spells[-2:]) else 0
-            if s['manager_rep']+track-fiscal>=opening['required']:
+            if s.get('match_model',0)==4 and now>=opening['closes']:
+                app.update(status='expired',reason='deadline')
+            elif application_score(s)>=opening['required']:
                 app.update(status='offered',expires=min(opening['closes'],now+2),reason='qualified')
             else:
                 app.update(status='rejected',reason='requirements')
@@ -120,6 +128,26 @@ def record_match(s,goals,conceded):
     row['w' if goals>conceded else 'd' if goals==conceded else 'l']+=1
 
 
+def open_entry_job(s, ranking):
+    m=s['manager_state']
+    score=application_score(s)
+    now=clock(s)
+    for team,opening in m['vacancies'].items():
+        app=application(s,team)
+        if ((app and app['status']=='offered') or
+            score>=opening['required'] and
+            ((app and app['status']=='pending') or (app is None and now+1<opening['closes']))):
+            return
+    pool=[team for team in ranking[-6:] if team not in m['vacancies']]
+    if not pool:
+        return
+    team=min(pool,key=lambda t:(s['finance'][t]['cash']<0,s['club_reputation'][t],t))
+    vacancy(s,team,'opening')
+    opening=m['vacancies'][team]
+    # Minimum reputation (10) minus the recent financial dismissal penalty (4).
+    opening['required']=6
+
+
 def weekly(s):
     if 'manager_state' not in s:return
     resolve(s)
@@ -140,3 +168,5 @@ def weekly(s):
         bad=[t for rank,t in enumerate(ranking,1) if rank>=s['board_targets'][t]+2
              and rank>=12 and t!=m['active_team'] and t not in m['vacancies']]
         if bad:vacancy(s,bad[-1],'performance')
+    if s.get('match_model',0)==4 and not s['employed']:
+        open_entry_job(s,ranking)

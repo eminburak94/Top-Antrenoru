@@ -4,7 +4,7 @@ from collections import Counter
 from ekonomi import projection,can_commit
 from mevkiler import fit_level,LAYOUTS,group_for
 from oyuncu import ability,age_at,state
-from sozlesme import asking_terms,renew
+from sozlesme import asking_terms,player_accepts,renew
 from transfer import add_offer,asking_fee,deal,selling_ready
 from veritabani import TEAMS,all_players,available,roster
 
@@ -42,6 +42,13 @@ def assess(s, team, squad):
 
 def skill(s,p,role):
     return ability(s,p)*(.68+.08*fit_level(p,role))
+
+
+def contract_cost_penalty(fee, terms, plan, budget):
+    weeks=34*terms['years']
+    total=fee+terms['signing']+weeks*terms['wage']
+    capacity=budget+weeks*max(0,plan['wage_room']-plan['wages'])
+    return 4*total/max(80000,capacity)
 
 
 def recruit(s):
@@ -114,7 +121,10 @@ def recruit(s):
                 if cost>budget or z['contract']>s['year']+1 and owner and quality<baseline+1:continue
                 if not can_commit(s,team,cost,terms['wage'],forecast=plan):continue
                 score=quality+upside+experience+fit*.28-max(0,age-30)*.32
-                score-=cost/max(80000,budget)*2.8+terms['wage']/max(1000,plan['wage_room'])*5
+                if s.get('match_model',0)==4:
+                    score-=contract_cost_penalty(fee,terms,plan,budget)
+                else:
+                    score-=cost/max(80000,budget)*2.8+terms['wage']/max(1000,plan['wage_room'])*5
                 options.append((score,pid,p,owner,fee,terms))
             for _,pid,p,owner,fee,terms in sorted(options,reverse=True):
                 if s['employed'] and owner==s['club']:
@@ -146,5 +156,6 @@ def renew_contracts(s,team,squad):
         if alternatives>=DEPTH[group] or (age>=34 and alternatives>=2 and z['wage']>4500):
             continue
         terms=asking_terms(s,p,team,'Starter')
-        terms['wage']=round(terms['wage']*1.23)
+        if s.get('match_model',0)!=4 or not player_accepts(s,p,team,**terms):
+            terms['wage']=round(terms['wage']*1.23)
         renew(s,p['id'],**terms,club=team)

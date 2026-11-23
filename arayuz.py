@@ -432,6 +432,9 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews):
    widgets.clear()
    i=choice.current()
    if i==len(reports):
+    if s.get('match_model',0)==4:
+     label=ttk.Label(self.body,text=msg('annual_development_explain'),wraplength=840)
+     label.pack(anchor='w');widgets.append(label)
     rows=[(p['name'],f'{delta:+.2f}') for pid,delta in changes.items() if (p:=player(s,pid))]
     tree=self.tree([msg('player'),msg('actual_ca')],rows)
    else:
@@ -607,7 +610,11 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews):
    amount=None
    if choice=='counter':
     label=tr('Karşı teklif','Counteroffer')
-    raw=simpledialog.askstring('Top Antrenörü',f'{label} ({money_rate(s)[1]})',parent=self.r)
+    prompt=f'{label} ({money_rate(s)[1]})'
+    if s.get('match_model',0)==4:
+     prompt+='\n'+tr('Kabul sınırı alıcının kadro ihtiyacına ve bütçesine bağlıdır.',
+                      "The buyer's squad needs and budget determine what it can accept.")
+    raw=simpledialog.askstring('Top Antrenörü',prompt,initialvalue=edit_value(s,offer['fee']),parent=self.r)
     if raw is not None:
      try:amount=from_display(s,raw)
      except ValueError:messagebox.showinfo('Top Antrenörü',self.reason('fee'));return

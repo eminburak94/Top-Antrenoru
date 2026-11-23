@@ -108,6 +108,17 @@ def develop(s, p, rng, active=True, minutes=0, facility=1.):
         delta = -.27 - min(.82,.105*(age-peak)) - (.10 if not active else 0)
     else:
         delta = 0
+    if s.get('match_model',0)==4 and isinstance(age,int):
+        if 16<=age<=26 and delta>0 and active:
+            rows=s.get('season_stats',{}).get(p['id'],{}).values()
+            rated=sum(row['rated'] for row in rows)
+            if rated:
+                average=sum(row['rating_sum'] for row in rows)/(10*rated)
+                performance=clamp((average-6.5)*.16,-.13,.13)
+                delta*=1+performance*min(1,rated/15)*exposure
+        elif age>peak:
+            fitness=attributes(s,p)['Natural fitness']
+            delta*=1+clamp((11-fitness)*.035,-.23,.23)
     if delta>0:
         resilience=max(.62,1-z.get('injury_matches',0)*.025)
         delta*=z['professionalism']*z['personality_drive']*resilience*facility
