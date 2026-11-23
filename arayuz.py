@@ -31,14 +31,14 @@ from ise_alim_ui import RecruitmentViews, report_index
 from ekonomi import projection
 from mac_gorunum import Pitch,interpolate
 from duran_top_ui import SetPieceViews
-from tema import PALETTE as THEME,FONT,install
+from tema import PALETTE as THEME,FONT,install,wrap_controls
 from kayit import user_directory
 
 class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews):
  def __init__(self,r):
-  self.r=r;self.s=None;self.lang='TR';r.title('Top Antrenörü v0.8.9 Playtest Beta');r.geometry('1200x760');r.minsize(960,600);r.configure(bg=THEME['base'])
+  self.r=r;self.s=None;self.lang='TR';r.title('Top Antrenörü v0.9.0 Playtest Beta');r.geometry('1200x760');r.minsize(960,600);r.configure(bg=THEME['base'])
   install(r)
-  self.head=tk.Label(r,bg=THEME['base'],fg=THEME['accent'],font=(FONT,19,'bold'),pady=11);self.head.pack(fill='x');self.nav=ttk.Frame(r,padding=8);self.nav.pack(fill='x');self.body=ttk.Frame(r,padding=16);self.body.pack(fill='both',expand=True);self.status=tk.Label(r,bg=THEME['base'],fg=THEME['muted'],anchor='w',padx=16,pady=8,text='TOP ANTRENÖRÜ  |  2000–2001  |  v0.8.9 Playtest Beta');self.status.pack(side='bottom',fill='x');self.start()
+  self.head=tk.Label(r,bg=THEME['base'],fg=THEME['accent'],font=(FONT,19,'bold'),pady=11);self.head.pack(fill='x');self.nav=ttk.Frame(r,padding=8);self.nav.pack(fill='x');self.body=ttk.Frame(r,padding=16);self.body.pack(fill='both',expand=True);self.status=tk.Label(r,bg=THEME['base'],fg=THEME['muted'],anchor='w',padx=16,pady=8,text='TOP ANTRENÖRÜ  |  2000–2001  |  v0.9.0 Playtest Beta');self.status.pack(side='bottom',fill='x');self.start()
  def tr(self,a,b):return a if self.lang=='TR' else b
  def management_text(self,key,**values):
   return self.tr(*TEXT[key]).format(**values)
@@ -1044,7 +1044,7 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews):
   bar=ttk.Frame(f);bar.pack(side='bottom',fill='x',pady=(5,0))
   style=tk.StringVar(value=m.style)
   cb=ttk.Combobox(bar,textvariable=style,values=['Balanced','Attack','Defend'],state='readonly',width=13)
-  cb.pack(side='left');cb.bind('<<ComboboxSelected>>',lambda _:setattr(m,'style',style.get()))
+  cb.bind('<<ComboboxSelected>>',lambda _:setattr(m,'style',style.get()))
   stage=ttk.Panedwindow(f,orient='horizontal')
   stage.pack(fill='both',expand=True)
   field=ttk.Frame(stage);stage.add(field,weight=5)
@@ -1076,10 +1076,11 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews):
   frames=deque()
   important=tk.BooleanVar(value=True)
   if m.capture:
-   ttk.Checkbutton(field,text=self.tr('Önemli anlar','Highlights'),variable=important).pack(anchor='w')
+   ttk.Checkbutton(field,text=self.tr('Önemli anlar','Highlights'),variable=important).pack(
+       before=pitch,side='bottom',anchor='w')
   sound=tk.BooleanVar(value=False)
   if m.rules:
-   ttk.Checkbutton(bar,text=self.tr('Ses','Sound'),variable=sound).pack(side='left')
+   ttk.Checkbutton(bar,text=self.tr('Ses','Sound'),variable=sound)
   if spatial:
    tactical=ttk.Frame(f);tactical.pack(before=bar,side='bottom',fill='x')
    for key,tr_name,en_name in [('press','Pres','Press'),('tempo','Tempo','Tempo'),('width','Genişlik','Width')]:
@@ -1250,7 +1251,15 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews):
      refresh()
     else:messagebox.showinfo('Top Antrenörü',self.tr('Değişiklik yapılamadı.','Substitution unavailable.'),parent=d)
    ttk.Button(d,text=self.tr('Uygula','Apply'),command=apply).pack(pady=8)
-  self.button(bar,'Oyuncu değiştir','Substitute',sub).pack(side='left');self.button(bar,'Başlat','Start',start).pack(side='left');self.button(bar,'Durdur','Pause',pause).pack(side='left');ttk.Combobox(bar,textvariable=speed,values=['1x','2x','4x'],state='readonly',width=4).pack(side='left');self.button(bar,'Adım' if m.positional else '5 dakika','Step' if m.positional else '5 minutes',single).pack(side='left');self.button(bar,'Maçı bitir','Finish match',finish).pack(side='right');w.protocol('WM_DELETE_WINDOW',lambda:messagebox.showinfo('Top Antrenörü',self.tr('Önce maçı bitir.','Finish match first.')));w.update_idletasks();refresh()
+  self.button(bar,'Oyuncu değiştir','Substitute',sub)
+  self.button(bar,'Başlat','Start',start)
+  self.button(bar,'Durdur','Pause',pause)
+  ttk.Combobox(bar,textvariable=speed,values=['1x','2x','4x'],state='readonly',width=4)
+  self.button(bar,'Adım' if m.positional else '5 dakika','Step' if m.positional else '5 minutes',single)
+  self.button(bar,'Maçı bitir','Finish match',finish)
+  wrap_controls(bar)
+  w.protocol('WM_DELETE_WINDOW',lambda:messagebox.showinfo('Top Antrenörü',self.tr('Önce maçı bitir.','Finish match first.')))
+  w.update_idletasks();refresh()
   if m.capture or not spatial:
    from konumsal import positions
    if m.positional:
@@ -1297,7 +1306,7 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews):
     messagebox.showerror('Top Antrenörü',self.tr('Kayıt yazılamadı.','Save could not be written.'))
  def load(self):
   folder=user_directory()/'saves'
-  previous=[user_directory().parent/version/'saves' for version in ('v0.8.8','v0.8.7','v0.8.6','v0.8.5','v0.8.4','v0.8.3')]
+  previous=[user_directory().parent/version/'saves' for version in ('v0.8.9','v0.8.8','v0.8.7','v0.8.6','v0.8.5','v0.8.4','v0.8.3')]
   legacy=Path.home()/'TopAntrenoru'/'saves'
   initial=next((item for item in (folder,*previous,legacy) if item.is_dir()),Path.home())
   path=filedialog.askopenfilename(filetypes=[('JSON','*.json')],initialdir=initial)

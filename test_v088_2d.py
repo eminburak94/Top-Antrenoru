@@ -20,9 +20,13 @@ def button(parent, text):
 
 
 class PlaybackTests(TestCase):
-    def start_match(self, match, width=960, language='EN'):
+    def start_match(self, match, width=960, language='EN', scale=None):
         root=tk.Tk()
         self.addCleanup(root.destroy)
+        if scale is not None:
+            previous_scale=root.tk.call('tk','scaling')
+            self.addCleanup(root.tk.call,'tk','scaling',previous_scale)
+            root.tk.call('tk','scaling',scale)
         ui=UI(root)
         ui.autosave=lambda:None
         ui.lang=language
@@ -33,6 +37,25 @@ class PlaybackTests(TestCase):
             ui.live()
         root.update()
         return root,next(w for w in root.winfo_children() if isinstance(w,tk.Toplevel))
+
+    def test_controls_fit_a_small_match_window_at_high_tk_scale(self):
+        for language in ('TR','EN'):
+            with self.subTest(language=language):
+                s=new('GALATASARAY',seed=901,match_model=4)
+                s['lang']=language
+                root,window=self.start_match(LiveMatch(s),language=language,scale=2.5)
+                try:
+                    window.geometry('800x510')
+                    root.update()
+                    right=window.winfo_rootx()+window.winfo_width()
+                    bottom=window.winfo_rooty()+window.winfo_height()
+                    for widget in descendants(window):
+                        if isinstance(widget,(ttk.Button,ttk.Checkbutton,ttk.Combobox)):
+                            self.assertTrue(widget.winfo_ismapped(),widget)
+                            self.assertLessEqual(widget.winfo_rootx()+widget.winfo_width(),right)
+                            self.assertLessEqual(widget.winfo_rooty()+widget.winfo_height(),bottom)
+                finally:
+                    window.destroy()
 
     def test_final_animation_commits_without_an_extra_step(self):
         s=new('GALATASARAY',seed=822,match_model=4)

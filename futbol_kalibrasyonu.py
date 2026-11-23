@@ -71,13 +71,26 @@ class CalibratedPitch(RulesPitch):
 
     def boundary(self, origin, destination, last_side, last_player):
         point = touchline_crossing(origin, destination)
-        if point is None:
+        if point is not None:
+            self.receive(last_side, None, point)
+            self.frame()
+            self.event(last_side, last_player, 'throw_awarded')
+            self.dead_ball('throw', 1-last_side, point)
+            return True
+
+        # Swap axes to test the same segment against the goal lines.
+        crossing = touchline_crossing(origin[::-1], destination[::-1])
+        if crossing is None:
             return False
-        self.ball = point
-        self.owner = None
+        y, x = crossing
+        self.receive(last_side, None, (x, y))
         self.frame()
-        self.event(last_side, last_player, 'throw_awarded')
-        self.dead_ball('throw', 1-last_side, point)
+        defending = int(x)
+        if last_side == defending:
+            corner = (.99 if defending else .01, .02 if y < .5 else .98)
+            self.dead_ball('corner', 1-defending, corner)
+        else:
+            self.dead_ball('goal_kick', defending, (.94 if defending else .06, .5))
         return True
 
     def pass_miss(self, dest, origin):

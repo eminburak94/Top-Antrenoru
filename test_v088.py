@@ -8,6 +8,27 @@ from veritabani import roster
 
 
 class MatchBalance(TestCase):
+    def test_model4_deflections_use_the_first_line_crossed_and_last_touch(self):
+        pitch=LiveMatch(new('GALATASARAY',seed=813,match_model=4)).pitch
+        cases=(
+            ((.9,.7),(1.1,.8),0,('goal_kick',1,(.94,.5))),
+            ((.9,.7),(1.1,.8),1,('corner',0,(.99,.98))),
+            ((.1,.3),(-.1,.2),1,('goal_kick',0,(.06,.5))),
+            ((.1,.3),(-.1,.2),0,('corner',1,(.01,.02))),
+            ((.8,.9),(1.1,1.2),0,('throw',1,(.9,1))),
+        )
+        for origin,destination,last_side,(restart,side,point) in cases:
+            with self.subTest(origin=origin,destination=destination,last_side=last_side):
+                last_player=pitch.m.slots[last_side][0][1]
+                pitch.receive(last_side,last_player)
+                pitch.last_pass=(last_side,last_player,last_player)
+                self.assertTrue(pitch.boundary(origin,destination,last_side,last_player))
+                self.assertEqual((pitch.restart,pitch.side),(restart,side))
+                self.assertIsNone(pitch.owner)
+                self.assertIsNone(pitch.last_pass)
+                for actual,expected in zip(pitch.ball,point):
+                    self.assertAlmostEqual(actual,expected)
+
     def test_open_play_effect_is_bounded_and_neutral_at_equal_strength(self):
         self.assertEqual(open_play_target(.5,12,12),.5)
         self.assertGreater(open_play_target(.5,14,12),.5)
