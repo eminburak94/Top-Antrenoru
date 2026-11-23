@@ -4,16 +4,18 @@ from donem import scaled
 
 from veritabani import TEAMS, available, player, all_players, roster
 
-ROLES=('assistant','coach','fitness','goalkeeping','scout')
+CORE_ROLES=('assistant','coach','fitness','goalkeeping','scout')
+ROLES=(*CORE_ROLES,'medical')
 SKILLS=('coaching','attack','defence','goalkeeping','fitness','judging','potential',
         'tactics','motivation','discipline')
 SPECIAL=dict(zip(ROLES,(('tactics','motivation'),('coaching','attack','defence'),
-                       ('fitness','discipline'),('goalkeeping',),('judging','potential'))))
+                       ('fitness','discipline'),('goalkeeping',),('judging','potential'),('fitness',))))
 TASKS={'lineup':('assistant','advice'), 'team_training':('coach','automatic'),
        'individual_training':('coach','advice'), 'scouting':('scout','advice')}
 FIRST=('Deniz','Ekin','Erdem','Bora','Alp','Mert','Selin','Sarp','Işıl','Yağız','Özge','Barış')
 LAST=('Acar','Esen','Güney','Torun','Gök','Erden','Yalın','Vardar','Tunç','Günay','Sezer')
 REPORT_LIMIT=60
+MEDICAL_CANDIDATES=8
 
 
 def capacity(s,team):
@@ -24,8 +26,8 @@ def capacity(s,team):
 def setup(s):
     pool={}
     for i,team in enumerate((*TEAMS,*([None]*6))):
-        for j,role in enumerate(ROLES):
-            index=i*len(ROLES)+j
+        for j,role in enumerate(CORE_ROLES):
+            index=i*len(CORE_ROLES)+j
             pid=f'staff-{index+1:03d}'
             rng=random.Random(f'Top Antrenoru staff v1:{pid}')
             skills={key:rng.randint(*( (9,17) if key in SPECIAL[role] else (4,12))) for key in SKILLS}
@@ -35,6 +37,22 @@ def setup(s):
                 club=owned,start=s['year'] if owned else None,end=s['year']+2+j%2 if owned else None,
                 source='fictional')
     s['staff_system']=dict(version=1,pool=pool,delegation={},jobs=[],reports=[],booked={})
+    medical_market(s)
+
+
+def medical_market(s):
+    st=s.get('staff_system')
+    if not s.get('workload_model') or not st:
+        return
+    pool=st['pool']
+    for index in range(MEDICAL_CANDIDATES):
+        pid=f'medical-{index+1:02}'
+        if pid in pool:
+            continue
+        skill=10+index
+        pool[pid]=dict(name=f'{FIRST[index]} {LAST[-index-1]}',role='medical',
+            skills={key:skill if key=='fitness' else 6 for key in SKILLS},
+            wage=450+skill*30,club=None,start=None,end=None,source='fictional')
 
 
 def active(s,team,role=None):
@@ -114,10 +132,11 @@ def refill(s):
                 options=[(pid,row) for pid,row in st['pool'].items()
                          if row['club'] is None and row['role']==role]
                 if s.get('economy_model'):
-                    if not options and len(st['pool'])<150:
+                    count=sum(row['role']!='medical' for row in st['pool'].values())
+                    if not options and count<150:
                         from ekonomi import can_commit
                         if can_commit(s,team,0,0,900):
-                            pid=f"staff-{len(st['pool'])+1:03d}"
+                            pid=f"staff-{count+1:03d}"
                             rng=random.Random(pid)
                             row=dict(name=f'{FIRST[rng.randrange(len(FIRST))]} {LAST[rng.randrange(len(LAST))]}',
                                      role=role,skills={k:rng.randint(5,13) for k in SKILLS},

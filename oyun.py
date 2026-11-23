@@ -32,7 +32,7 @@ def check_package(output):
     with TemporaryDirectory() as folder, patch.dict(os.environ,{
         'LOCALAPPDATA':folder, 'USERPROFILE':folder,
     }):
-        assert user_directory()==Path(folder)/'TopAntrenoru'/'v0.9.4'
+        assert user_directory()==Path(folder)/'TopAntrenoru'/'v0.9.5'
         path=user_directory()/'saves'/'probe.json'
         root=tk.Tk()
         try:
@@ -49,6 +49,17 @@ def check_package(output):
             s=ui.s
             assert (s['club'],s['year'],s['match_model'])==('FENERBAHÇE',2000,4)
             version=root.title()
+            opponent=find(ui.body,ttk.Combobox,lambda w:'GALATASARAY' in w.cget('values'))
+            opponent.set('GALATASARAY')
+            click(ui.body,'Book opponent')
+            s['match_mode']='quick'
+            click(ui.body,'Advance preparation week')
+            find(root,tk.Toplevel).destroy()
+            assert s['preseason']['results'][0][:3]==[0,'FENERBAHÇE','GALATASARAY']
+            assert not s['results'] and s['week']==1
+            for _ in range(3):
+                click(ui.body,'Advance preparation week')
+            s['match_mode']='2d'
 
             ui.squad()
             root.update()

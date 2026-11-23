@@ -20,6 +20,9 @@ def plan_for(s, p, z, age):
 
 
 def recent_minutes(s, pid):
+    recorded = s.get('fitness', {}).get(pid, {}).get('workload')
+    if s.get('workload_model') and recorded:
+        return recorded[-1][0]
     report = s.get('weekly_feedback', {})
     if (report.get('year'), report.get('week'), report.get('club')) != (
             s['year'], s['week'] - 1, s['club']):

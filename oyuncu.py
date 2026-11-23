@@ -125,10 +125,12 @@ def develop(s, p, rng, active=True, minutes=0, facility=1.):
     delta += rng.uniform(-.095,.095)
     ceiling = max(4,z['potential'] - .08)
     z['ability']=round(clamp(old+delta,4,ceiling),2)
+    z.pop('workload',None)
+    z.pop('return_weeks',None)
     z.update(condition=100, injury=0, form=6.5, apps=0, minutes=0, training_weeks=0, injury_matches=0,
              morale=round(70+(z['morale']-70)*.45),cards=0,ban=0)
 
-def prepare_player(s,p,team,fitness_bonus=None,programme=None):
+def prepare_player(s,p,team,fitness_bonus=None,programme=None,rehab_staff=None):
     z = state(s, p)
     user_club = team == s['club'] and s['employed']
     if fitness_bonus is None or programme is None:
@@ -138,13 +140,28 @@ def prepare_player(s,p,team,fitness_bonus=None,programme=None):
     age = age_at(p, s['year'], s['week'])
     plan = None
     if user_club:
-        from antrenman import apply_plan, plan_for, recent_minutes
+        from antrenman import plan_for
         # Select recovery before the ordinary weekly recovery masks low condition.
         plan = plan_for(s,p,z,age)
+    if s.get('workload_model'):
+        from oyuncu_yuku import fatigue, recovery_ceiling, recovery_staff
+        if rehab_staff is None:
+            rehab_staff = recovery_staff(s,team)
+        if z.get('return_weeks'):
+            plan = ('recovery', 'light')
+        elif user_club and s.get('auto_training') and p['id'] not in s.get('individual_training', {}) and fatigue(z) >= 20:
+            plan = ('recovery', 'normal')
     z['condition'] = min(100,z['condition'] + fitness_bonus + (28 if user_club and programme=='Rest' else 23))
     z['morale'] += (70 - z['morale']) * .10
     if plan:
-        return apply_plan(z,*plan,age,recent_minutes(s,p['id']))
-    if user_club and programme=='Development' and isinstance(age, int) and age < 25:
+        from antrenman import apply_plan, recent_minutes
+        observation = apply_plan(z,*plan,age,recent_minutes(s,p['id']))
+    else:
+        observation = None
+    if not plan and user_club and programme=='Development' and isinstance(age, int) and age < 25 and (
+            not s.get('workload_model') or not z['injury']):
         z['training_weeks'] = z.get('training_weeks',0) + 1
         z['condition'] = max(40, z['condition'] - 4)
+    if s.get('workload_model'):
+        z['condition'] = min(z['condition'], recovery_ceiling(z, rehab_staff))
+    return observation

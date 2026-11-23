@@ -7,6 +7,7 @@ import tkinter as tk
 from tkinter import ttk
 
 from arayuz import UI
+from hazirlik import DAYS, rest
 from oyun import check_package
 from test_v088_2d import button, descendants
 
@@ -44,6 +45,15 @@ class BetaUI(TestCase):
                 for widget in categories:
                     self.assertTrue(widget.winfo_ismapped(),widget.cget('text'))
                     self.assertGreaterEqual(widget.winfo_width(),widget.winfo_reqwidth(),widget.cget('text'))
+                prep=button(ui.body,'Book opponent' if lang=='EN' else 'Rakibi planla')
+                self.assertTrue(prep.winfo_ismapped())
+                forward=button(ui.body,'Advance preparation week' if lang=='EN' else 'Hazırlık haftasını ilerlet')
+                self.assertTrue(forward.winfo_ismapped())
+                for _ in range(DAYS):
+                    self.assertTrue(rest(ui.s))
+                ui.menu()
+                ui.dashboard()
+                root.update()
                 news=button(ui.body,'News' if lang=='EN' else 'Haberler')
                 self.assertGreaterEqual(news.winfo_width(),news.winfo_reqwidth())
                 ui.tactics()

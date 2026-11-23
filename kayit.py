@@ -180,6 +180,7 @@ def validate(s):
                 all(isinstance(pid,str) and pid in P for pid in xi) and len(set(xi))==11,
                 'Invalid manual lineup')
     require(all(pid in P and integer(n, 1, 99) for pid, n in s.get('numbers', {}).items()), 'Invalid shirt numbers')
+    require(integer(s.get('workload_model',0),0,1), 'Invalid workload model')
     for pid, z in s.get('fitness', {}).items():
         require(pid in P and isinstance(z, dict), 'Unknown player state')
         require({'condition','morale','form','injury','apps'} <= z.keys(), 'Incomplete player state')
@@ -188,6 +189,13 @@ def validate(s):
         require(all(key not in z or numeric(z[key], *bounds) for key, bounds in ranges.items()), 'Invalid player ratings')
         require(all(key not in z or integer(z[key], 0) for key in
                     ('injury', 'apps', 'minutes', 'wage', 'contract', 'cards', 'ban')), 'Invalid player counters')
+        if 'workload' in z:
+            from oyuncu_yuku import WINDOW
+            require(isinstance(z['workload'],list) and len(z['workload'])<=WINDOW
+                    and all(isinstance(row,list) and len(row)==2 and integer(row[0],0,90)
+                            and integer(row[1],0,8) for row in z['workload']), 'Invalid player workload')
+        if 'return_weeks' in z:
+            require(integer(z['return_weeks'],1,2) and not z['injury'], 'Invalid return to play')
     if 'weekly_feedback' in s:
         report = s['weekly_feedback']
         require(isinstance(report, dict) and report.get('club') in TEAMS
@@ -416,11 +424,10 @@ def validate_manager(s):
 
 
 def validate_staff(s,players):
-    from personel import ROLES,SKILLS,TASKS,REPORT_LIMIT
+    from personel import MEDICAL_CANDIDATES,ROLES,SKILLS,TASKS,REPORT_LIMIT
     if 'staff_system' not in s:return
     st=s['staff_system']
-    require(isinstance(st,dict) and st.get('version')==1 and isinstance(st.get('pool'),dict)
-            and 120<=len(st['pool'])<=(150 if s.get('economy_model') else 120), 'Invalid staff system')
+    require(isinstance(st,dict) and st.get('version')==1 and isinstance(st.get('pool'),dict), 'Invalid staff system')
     pool=st['pool']
     for pid,row in pool.items():
         require(isinstance(pid,str) and isinstance(row,dict) and isinstance(row.get('name'),str)
@@ -431,6 +438,9 @@ def validate_staff(s,players):
         require((row.get('club') is None and row.get('start') is None and row.get('end') is None)
                 or (row.get('club') in TEAMS and integer(row.get('start'),2000,s['year'])
                     and integer(row.get('end'),s['year']+1)), 'Invalid staff contract')
+    medical=sum(row['role']=='medical' for row in pool.values())
+    require(medical<=(MEDICAL_CANDIDATES if s.get('workload_model') else 0)
+            and 120<=len(pool)-medical<=(150 if s.get('economy_model') else 120), 'Invalid staff pool size')
     delegation=st.get('delegation')
     require(isinstance(delegation,dict),'Invalid delegation')
     for team,tasks in delegation.items():

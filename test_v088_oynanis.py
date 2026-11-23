@@ -79,6 +79,9 @@ class CareerPlaythrough(TestCase):
                 s=ui.s
                 club=s['club']
                 self.assertEqual(club,'FENERBAHÇE')
+                from hazirlik import DAYS
+                for _ in range(DAYS):
+                    self.assertTrue(advance(s))
 
                 ui.squad()
                 self.assertEqual(len(find(ui.body,ttk.Treeview).get_children()),len(roster(club,2000,s)))

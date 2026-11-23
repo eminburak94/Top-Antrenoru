@@ -100,7 +100,11 @@ class SaveDialogSafety(TestCase):
             path=Path(tmp)/'career.json'
             career=new('GALATASARAY',seed=889,match_model=4)
             save_game(career,path)
-            expected=encode(career)
+            from copy import deepcopy
+            from personel import medical_market
+            upgraded=deepcopy(dict(career,workload_model=1))
+            medical_market(upgraded)
+            expected=encode(upgraded)
             self.assertTrue(advance(career))
             save_game(career,path)
             backup=backup_path(path)
@@ -116,7 +120,7 @@ class SaveDialogSafety(TestCase):
                     self.assertIsNone(ui.s)
                     ui.load()
                 self.assertEqual(confirm.call_count,2)
-                self.assertEqual(encode(ui.s),expected)
+                self.assertEqual(json.loads(encode(ui.s)),json.loads(expected))
                 self.assertEqual(path.read_bytes(),corrupt)
                 self.assertEqual(backup.read_bytes(),healthy)
             finally:

@@ -17,11 +17,12 @@ from yonetim import record_week, weekly_snapshot
 from antrenman import ability_snapshot, record_month
 import personel
 import is_piyasasi
+import oyuncu_yuku as workload
 
 SCHEMA_VERSION = 3
 
 def new(club, manager="Menajer", seed=None, unemployed=False, models=True, economy_version=2, match_model=0,
-        transfer_model=False,living_club=False,tactics_model=False,preseason=False):
+        transfer_model=False,living_club=False,tactics_model=False,preseason=False,workload_model=False):
     if club not in TEAMS:
         raise ValueError('Unknown club')
     s = dict(club=club, manager=manager, year=2000, history=[], week=1,
@@ -31,6 +32,7 @@ def new(club, manager="Menajer", seed=None, unemployed=False, models=True, econo
     if match_model:s.update(match_model=match_model,match_mode='2d')
     if tactics_model and match_model==4:s['tactics_model']=1
     if transfer_model:s['transfer_model']=1
+    if workload_model:s['workload_model']=1
     prepare(s)
     personel.setup(s)
     if models:
@@ -121,10 +123,11 @@ def prepare_week(s, observations=None):
     for team in TEAMS:
         operating(s,team)
     conditioning={team:personel.effects(s,team)[0] for team in TEAMS} if 'staff_system' in s else {}
+    rehab={team:workload.recovery_staff(s,team) for team in TEAMS} if s.get('workload_model') else {}
     programme=personel.team_training(s,s['club'])
     for pid, team in s['owners'].items():
         p = player(s,pid)
-        observation = prepare_player(s,p,team,conditioning.get(team,0),programme)
+        observation = prepare_player(s,p,team,conditioning.get(team,0),programme,rehab.get(team))
         if observation and observations is not None:
             observations[pid] = observation
         borrower,parent=wage_shares(s,pid,state(s,p)['wage'])
@@ -132,18 +135,28 @@ def prepare_week(s, observations=None):
         if parent:wages(s,s['loans'][pid]['parent'],parent)
     rng = random_for(s)
     fixtures = [m for m in s['schedule'] if m['week'] == s['week']]
-    return [(fixture, rng.getrandbits(64), rng.getrandbits(64)) for fixture in fixtures], rng.getstate()
+    return [(fixture, rng.getrandbits(64), rng.getrandbits(64)) for fixture in fixtures], rng.getstate(), programme
 
-def apply_match(s, result, seed, loads=None):
+def apply_match(s, result, seed, loads=None, observations=None, user_programme='Normal'):
     rng = random.Random(seed)
+    tracked = s.get('workload_model')
     for side,(team, goals, conceded) in enumerate(((result.home, result.x, result.y), (result.away, result.y, result.x))):
+        if tracked:
+            rehab = workload.recovery_staff(s,team)
+            relief = workload.coaching_relief(s,team)
+            programme = user_programme if team == s['club'] else 'Normal'
         for p in sorted(roster(team, s['year'], s), key=lambda p: p['id']):
             z = state(s, p)
             if z['injury']:
                 z['injury_matches']=z.get('injury_matches',0)+1
-            z['injury'] = max(0, z['injury'] - 1)
-            z['ban'] = max(0, z['ban'] - 1)
             minutes = result.minutes.get(p['id'], 0)
+            returning = z.get('return_weeks',0)
+            if tracked:
+                workload.record(z,minutes,(observations or {}).get(p['id']),relief,programme)
+                workload.progress_injury(z,rehab)
+            else:
+                z['injury'] = max(0, z['injury'] - 1)
+            z['ban'] = max(0, z['ban'] - 1)
             if not minutes:
                 continue
             fraction = minutes / 90
@@ -154,8 +167,10 @@ def apply_match(s, result, seed, loads=None):
                 z['condition']=clamp(z['condition']-round((loads[side]-18)*.55*fraction),35,100)
             z['morale'] = clamp(z['morale'] + (2 if goals > conceded else -2 if goals < conceded else 0), 40, 90)
             z['form'] = round(clamp(.7 * z['form'] + .3 * result.ratings[p['id']], 4, 10), 1)
-            if rng.random() < .012 * fraction:
+            risk = workload.injury_multiplier(z,returning) if tracked else 1
+            if rng.random() < .012 * fraction * risk:
                 z['injury'] = rng.randint(1, 4)
+                z.pop('return_weeks',None)
                 if team == s['club']:
                     s['news'].append([s['week'], 'Sakatlık / Injury', p['name']])
         if team == s['club'] and s['employed']:
@@ -188,7 +203,8 @@ def apply_match(s, result, seed, loads=None):
     gate(s, result.home, participants)
     apply_score(s, result.home, result.away, result.x, result.y)
 
-def complete_week(s, plans, rng_state, user_match=None, feedback_before=None, observations=None):
+def complete_week(s, plans, rng_state, user_match=None, feedback_before=None, observations=None,
+                  user_programme='Normal'):
     rows = []
     for fixture, seed, effects_seed in plans:
         if user_match is not None and fixture['home'] == user_match.a and fixture['away'] == user_match.b:
@@ -202,7 +218,7 @@ def complete_week(s, plans, rng_state, user_match=None, feedback_before=None, ob
                    home=result.home,away=result.away,opening=engine.opening_review)
             if s.get("match_model"):
                 s["last_tactical_review"]["analysis"]=engine.analysis
-        apply_match(s,result,effects_seed,engine.loads if engine.spatial else None)
+        apply_match(s,result,effects_seed,engine.loads if engine.spatial else None,observations,user_programme)
         row=asdict(result)
         accumulate(s['season_stats'],row)
         rows.append(row)
@@ -244,12 +260,16 @@ def advance(s, intervention=None):
         return match.commit()
     before = weekly_snapshot(s)
     observations = {}
-    plans, rng_state = prepare_week(s, observations)
-    complete_week(s, plans, rng_state, feedback_before=before, observations=observations)
+    plans, rng_state, programme = prepare_week(s, observations)
+    complete_week(s, plans, rng_state, feedback_before=before, observations=observations,
+                  user_programme=programme)
     return True
 
 class LiveMatch(Match):
     def __init__(self, s):
+        from hazirlik import active
+        if active(s):
+            raise ValueError('The league has not started')
         self.career = s
         self.start = (s['year'], s['week'], s['rng_state'])
         preview = copy.deepcopy({key: value for key, value in s.items()
@@ -258,7 +278,7 @@ class LiveMatch(Match):
         index_rosters(preview)
         self.feedback_before = weekly_snapshot(preview)
         self.observations = {}
-        self.plans, self.next_rng_state = prepare_week(preview, self.observations)
+        self.plans, self.next_rng_state, self.programme = prepare_week(preview, self.observations)
         fixture, seed, _ = next(plan for plan in self.plans if s['club'] in
                                 (plan[0]['home'], plan[0]['away']))
         super().__init__(preview, fixture, seed)
@@ -268,7 +288,8 @@ class LiveMatch(Match):
         current = (self.career['year'], self.career['week'], self.career['rng_state'])
         if self.done or self.minute != 90 or current != self.start:
             return False
-        complete_week(self.s, self.plans, self.next_rng_state, self, self.feedback_before, self.observations)
+        complete_week(self.s, self.plans, self.next_rng_state, self, self.feedback_before, self.observations,
+                      self.programme)
         if 'training_month' not in self.s:
             self.career.pop('training_month',None)
         self.career.update(self.s)

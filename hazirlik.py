@@ -4,10 +4,11 @@ from random import Random
 
 from mac import Match
 from oyuncu import clamp, prepare_player, state
+import oyuncu_yuku as workload
+import personel
 from veritabani import TEAMS, index_rosters, roster
 
 DAYS = 4
-SUBSTITUTIONS = 6
 
 
 def setup(s):
@@ -38,12 +39,29 @@ def book(s, round_index, opponent=None, home=True):
     return True
 
 
-def recover(s, teams):
+def recover(s, teams, programme):
+    observations = {}
     for team in teams:
+        rehab = workload.recovery_staff(s, team)
+        conditioning = personel.effects(s, team)[0]
         for p in roster(team, s['year'], s):
-            prepare_player(s, p, team)
+            observations[p['id']] = prepare_player(s, p, team, conditioning, programme, rehab)
+    return observations
+
+
+def close_week(s, teams, observations, minutes, user_programme):
+    for team in teams:
+        rehab = workload.recovery_staff(s, team)
+        relief = workload.coaching_relief(s, team)
+        programme = user_programme if team == s['club'] else 'Normal'
+        for p in roster(team, s['year'], s):
             z = state(s, p)
-            z['injury'] = max(0, z['injury'] - 1)
+            if s.get('workload_model'):
+                pid = p['id']
+                workload.record(z, minutes.get(pid, 0), observations[pid], relief, programme)
+                workload.progress_injury(z, rehab)
+            else:
+                z['injury'] = max(0, z['injury'] - 1)
 
 
 def rest(s):
@@ -52,7 +70,9 @@ def rest(s):
     preparation = s['preseason']
     if str(preparation['round']) in preparation['fixtures']:
         return False
-    recover(s, (s['club'],))
+    clubs = TEAMS if s.get('workload_model') else (s['club'],)
+    programme = personel.team_training(s,s['club'])
+    close_week(s, clubs, recover(s, clubs, programme), {}, programme)
     preparation['round'] += 1
     return True
 
@@ -77,10 +97,12 @@ class Friendly(Match):
         self.booking = tuple(s['preseason']['fixtures'][str(self.round)])
         opponent, home = self.booking
         clubs = (s['club'], opponent)
+        self.training_clubs = TEAMS if s.get('workload_model') else clubs
         preview = dict(s, fitness=deepcopy(s['fitness']), preseason=deepcopy(s['preseason']),
                        _friendly=True)
         index_rosters(preview)
-        recover(preview, clubs)
+        self.programme = personel.team_training(preview,s['club'])
+        self.observations = recover(preview, self.training_clubs, self.programme)
         ordered = clubs if home else clubs[::-1]
         seed = random_for(s).getrandbits(64) ^ (0x9500 + self.round)
         super().__init__(preview, dict(home=ordered[0], away=ordered[1], friendly=True), seed)
@@ -98,6 +120,7 @@ class Friendly(Match):
             z = self.s['fitness'][pid]
             z['condition'] = max(35, z['condition'] - round(self.effects_rng.randint(12, 20) * minutes / 90))
             z['form'] = round(clamp(.85 * z['form'] + .15 * result.ratings[pid], 4, 10), 1)
+        close_week(self.s, self.training_clubs, self.observations, result.minutes, self.programme)
         s['fitness'].update(self.s['fitness'])
         familiarity = preparation['cohesion']
         formation = self.s['formation']

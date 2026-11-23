@@ -131,6 +131,7 @@ TEXT.update({
  'fictional_staff':('Kurgusal personel · Oyun tahmini özellikler','Fictional staff · Estimated game skills'),
  'role_assistant':('Yardımcı Antrenör','Assistant Manager'), 'role_coach':('Genel Antrenör','Coach'),
  'role_fitness':('Kondisyoner','Fitness Coach'), 'role_goalkeeping':('Kaleci Antrenörü','Goalkeeping Coach'),
+ 'role_medical':('Fizyoterapist','Physiotherapist'),
  'role_scout':('Gözlemci','Scout'), 'skill_coaching':('Antrenörlük','Coaching'),
  'skill_attack':('Hücum','Attack'), 'skill_defence':('Savunma','Defence'),
  'skill_goalkeeping':('Kalecilik','Goalkeeping'), 'skill_fitness':('Kondisyon','Fitness'),

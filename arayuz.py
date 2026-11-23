@@ -6,6 +6,7 @@ from tkinter import ttk, messagebox, filedialog, simpledialog
 from pathlib import Path
 from kariyer import new, prepare, advance, rollover, career, LiveMatch, lineup
 import hazirlik
+import oyuncu_yuku as workload
 from veritabani import P, TEAMS, available, roster, player, all_players, verified_results
 from finans import commitments,payroll
 from para import CURRENCIES,rate as money_rate,text as money_text,edit_value,from_display
@@ -70,7 +71,12 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews,ClubLifeViews):
    ttk.Label(card,text=self.tr(tr,en),style='DeskBody.TLabel').pack(anchor='w',pady=(0,8))
   self.button(self.body,'Ana menüye dön','Back to main menu',self.start).pack(anchor='w',pady=8)
  def toggle(self):self.lang='EN' if self.lang=='TR' else 'TR'
- def begin(self,s):s.setdefault('manager','Menajer');s.setdefault('year',2000);s.setdefault('history',[]);self.s=prepare(s);self.lang=s.get('lang',self.lang);self.menu();self.dashboard()
+ def begin(self,s):
+  s.setdefault('manager','Menajer');s.setdefault('year',2000);s.setdefault('history',[])
+  s.setdefault('workload_model',1)
+  from personel import medical_market
+  medical_market(s)
+  self.s=prepare(s);self.lang=s.get('lang',self.lang);self.menu();self.dashboard()
  def menu(self):
   for item in self.nav.winfo_children():item.destroy()
   tr=self.tr
@@ -241,7 +247,11 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews,ClubLifeViews):
    elif fixture:description=f"{fixture[0]} · "+(tr('Ev sahibi','Home') if fixture[1] else tr('Deplasman','Away'))
    else:description=tr('Hazırlık haftası','Preparation week')
    rows.append((hazirlik.day(index).isoformat(),description))
-  self.tree([tr('Tarih','Date'),tr('Program','Schedule')],rows,wide=True)
+  columns=[tr('Tarih','Date'),tr('Program','Schedule')]
+  if not hazirlik.active(s):
+   self.button(self.body,'Lig fikstürüne dön','Back to league fixtures',self.fixtures).pack(anchor='w')
+   self.tree(columns,rows,wide=True)
+   return
   controls=ttk.Frame(self.body);controls.pack(anchor='w',pady=8)
   dates=ttk.Combobox(controls,state='readonly',values=[hazirlik.day(i).isoformat() for i in range(current,hazirlik.DAYS)],width=12)
   opponents=ttk.Combobox(controls,state='readonly',values=[team for team in TEAMS if team!=s['club']],width=26)
@@ -256,12 +266,17 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews,ClubLifeViews):
    if hazirlik.book(s,current+dates.current(),None if cancel else opponents.get(),home.get()):
     self.preseason_page()
   dates.bind('<<ComboboxSelected>>',load_booking);load_booking()
-  self.button(controls,'Rakibi planla','Book opponent',book).grid(row=0,column=3,padx=5)
-  self.button(controls,'İptal et','Cancel fixture',lambda:book(True)).grid(row=0,column=4)
-  ttk.Label(self.body,text=tr('Hazırlık maçında en fazla altı değişiklik. Maçlar formu, kondisyonu ve kullanılan dizilişle uyumu etkiler. Lig puanı ve oyuncu istatistikleri ayrı kalır.',
-    'Make up to six substitutions in a friendly. Friendlies affect form, condition and familiarity with the formation. League points and player statistics remain separate.'),wraplength=780).pack(anchor='w')
-  self.button(self.body,'Hazırlık haftasını ilerlet','Advance preparation week',self.next).pack(anchor='w',pady=6)
+  self.button(controls,'Rakibi planla','Book opponent',book).grid(row=1,column=0,sticky='w',pady=4)
+  self.button(controls,'İptal et','Cancel fixture',lambda:book(True)).grid(row=1,column=1,sticky='w',padx=5)
+  actions=ttk.Frame(self.body);actions.pack(anchor='w',pady=(0,4))
+  self.button(actions,'Hazırlık haftasını ilerlet','Advance preparation week',self.next).pack(side='left')
+  self.button(actions,'Taktik ve ilk 11','Tactics and XI',self.tactics).pack(side='left',padx=5)
+  self.button(actions,'İzleme modu','Match mode',self.match_settings).pack(side='left')
+  ttk.Label(self.body,text=tr('Altı değişiklik hakkı. Form, kondisyon ve diziliş uyumu etkilenir.',
+    'Six substitutions. Friendlies affect form, condition and formation familiarity.'),wraplength=780).pack(anchor='w')
+  self.tree(columns,rows,wide=True)
  def preparation(self):
+  if hazirlik.active(self.s):return self.preseason_page()
   self.clear()
   ttk.Label(self.body,text=self.tr('Maç hazırlığı','Match preparation'),style='Title.TLabel').pack(anchor='w')
   ttk.Label(self.body,text=self.calendar_text(),wraplength=860).pack(anchor='w',pady=12)
@@ -365,7 +380,9 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews,ClubLifeViews):
   s=self.s
   manager=s.get('manager_state')
   club=(manager['active_team'] or self.management_text('unemployed_flag')) if manager else s['club']
-  self.head.config(text=f"{club} • {s['year']}/{str(s['year']+1)[-2:]} • {s['manager']} • {self.tr('Hafta','Week')} {min(34,s['week'])}")
+  time=(hazirlik.day(s['preseason']['round']).isoformat() if hazirlik.active(s)
+        else f"{self.tr('Hafta','Week')} {min(34,s['week'])}")
+  self.head.config(text=f"{club} • {s['year']}/{str(s['year']+1)[-2:]} • {s['manager']} • {time}")
  def tree(self,cols,rows,wide=False):
   frame=ttk.Frame(self.body);frame.pack(fill='both',expand=True);t=ttk.Treeview(frame,columns=list(range(len(cols))),show='headings');scroll=ttk.Scrollbar(frame,command=t.yview);t.configure(yscrollcommand=scroll.set);scroll.pack(side='right',fill='y')
   if wide:
@@ -470,13 +487,22 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews,ClubLifeViews):
   ttk.Label(self.body,text=self.tr('Haftalık antrenman planı','Weekly training plan')).pack(anchor='w')
   ttk.Label(self.body,text=msg('training_explain'),wraplength=820).pack(anchor='w',pady=8)
   ttk.Label(self.body,text=self.tr(
-   'Son lig maçında 60+ dakika oynayanlarda yoğun çalışma 2 ek kondisyon puanı tüketebilir. '
+   'Önceki hafta 60+ dakika oynayanlarda yoğun çalışma 2 ek kondisyon puanı tüketebilir. '
    'Otomatik plan, dinç genç yedeklere son maçta oynamadılarsa teknik çalışma verir. '
    'Toparlanma kondisyonu artırır, gelişim puanı vermez.',
-   'Intense work can cost two extra condition points after 60+ minutes in the last league match. '
+   'Intense work can cost two extra condition points after 60+ minutes in the previous week. '
    'Automatic planning assigns technical work to fit young players who missed that match. '
    'Recovery restores condition without adding development credit.'
   ),wraplength=820).pack(anchor='w')
+  if s.get('workload_model'):
+   rehab,fast=workload.recovery_staff(s,s['club'])
+   relief=workload.coaching_relief(s,s['club'])
+   ttk.Label(self.body,text=self.tr(
+    'Son üç hafta kondisyonun toparlanma sınırını belirler. Antrenör yükü {relief} puan azaltır. '
+    'Kondisyon ve sağlık ekibi toparlanma sınırına +{rehab} sağlar. Sakatlıktan dönüş {weeks} hafta hafif çalışmadır.',
+    'The last three weeks limit condition recovery. The coach reduces training load by {relief} points. '
+    'Fitness and medical staff add {rehab} to the recovery ceiling. Return to play uses {weeks} weeks of light work.'
+   ).format(relief=relief,rehab=rehab,weeks=1 if fast else 2),wraplength=820).pack(anchor='w')
   plans=s.setdefault('individual_training',{})
   enabled=tk.BooleanVar(value=s.get('auto_training',False))
   ttk.Checkbutton(self.body,text=msg('automatic'),variable=enabled,
@@ -505,14 +531,24 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews,ClubLifeViews):
   for p in people:
    pid=p['id']; fitness=s['fitness'][pid]; minutes=recent_minutes(s,pid)
    cue=(self.tr('Sakat','Injured') if fitness['injury'] else
+        self.tr('Sakatlıktan dönüş','Return to play') if fitness.get('return_weeks') else
+        self.tr('Birikimli yorgunluk','Accumulated fatigue') if workload.fatigue(fitness)>=20 else
         self.tr('Toparlanma önerilir','Recovery recommended') if fitness['condition']<70 else
         self.tr('Yükü izle','Monitor load') if minutes is not None and minutes>=60 else
         self.tr('Maç pratiği eksik','Lacks match practice') if minutes==0 else '—')
    focus_key,intensity=plans.get(pid,('inherit',None))
-   rows.append((p['name'],msg(focus_key),msg(intensity) if intensity else '—',
-                f"{fitness['condition']}%",minutes if minutes is not None else '—',cue))
-  grid=self.tree([msg('player'),msg('focus'),msg('intensity'),self.tr('Kondisyon','Condition'),
-             self.tr('Son maç dk.','Last match min.'),self.tr('Hazırlık notu','Readiness note')],rows,wide=True)
+   row=(p['name'],msg(focus_key),msg(intensity) if intensity else '—',
+        f"{fitness['condition']}%",minutes if minutes is not None else '—',cue)
+   if s.get('workload_model'):
+    entries=workload.history(fitness)
+    row+=(' / '.join(f'{mins} + {strain}' for mins,strain in entries) or '—',
+          workload.fatigue(fitness) if entries else '—')
+   rows.append(row)
+  columns=[msg('player'),msg('focus'),msg('intensity'),self.tr('Kondisyon','Condition'),
+           self.tr('Önceki hafta dk.','Last week min.'),self.tr('Hazırlık notu','Readiness note')]
+  if s.get('workload_model'):
+   columns += [self.tr('3 hafta · dk. + yük','3 weeks · min. + load'),self.tr('Yorgunluk','Fatigue')]
+  grid=self.tree(columns,rows,wide=True)
  def monthly_page(self):
   self.clear()
   s=self.s; msg=self.management_text
@@ -851,6 +887,8 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews,ClubLifeViews):
   self.button(self.body,*TEXT['back_table'],self.table).pack(side='left',padx=6)
  def fixtures(self):
   self.clear();self.tree([self.tr('Ev sahibi','Home'),self.tr('Deplasman','Away'),self.tr('Hafta','Week'),self.tr('Sonuç','Result')],[(m['home'],m['away'],m['week'],f"{next(q for q in self.s['results'][m['week']-1] if q['home']==m['home'] and q['away']==m['away'])['x']} - {next(q for q in self.s['results'][m['week']-1] if q['home']==m['home'] and q['away']==m['away'])['y']}" if m['week']<self.s['week'] else '-') for i,m in enumerate(self.s['schedule'])])
+  if 'preseason' in self.s:
+   self.button(self.body,'Temmuz 2000 hazırlık programı','July 2000 preparation calendar',self.preseason_page).pack(anchor='w')
  def archive(self):
   self.clear();rows=[]
   self.button(self.body,'Doğrulanmış 2000/01','Verified 2000/01',self.historical_results).pack(anchor='w')
