@@ -29,7 +29,9 @@ def check_package(output):
     def click(window, text):
         find(window,ttk.Button,lambda w:w.cget('text')==text).invoke()
 
-    with TemporaryDirectory() as folder, patch.dict(os.environ,{'LOCALAPPDATA':folder}):
+    with TemporaryDirectory() as folder, patch.dict(os.environ,{
+        'LOCALAPPDATA':folder, 'USERPROFILE':folder,
+    }):
         path=Path(folder)/'probe.json'
         root=tk.Tk()
         try:

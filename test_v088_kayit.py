@@ -1,13 +1,35 @@
+import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest import TestCase
 from unittest.mock import patch
 
-from kariyer import new
-from kayit import SaveError, backup_path, encode, load_game, save_game
+from kariyer import advance, new
+from kayit import SaveError, backup_path, decode, encode, load_game, save_game
 
 
 class SaveSafety(TestCase):
+    def test_generated_legacy_schema_migrations(self):
+        state=new('GALATASARAY',seed=888,models=False)
+        for key in ('attribute_profile','position_model','lineup_model','staff_system'):
+            state.pop(key,None)
+        for version in (None,1,2):
+            with self.subTest(version=version):
+                raw=json.loads(encode(state))
+                if version is None:
+                    for key in ('schema_version','database_version','schedule','career_id','rng_state'):
+                        del raw[key]
+                else:
+                    raw['schema_version']=version
+                text=json.dumps(raw)
+                restored=decode(text)
+                self.assertEqual(encode(restored),encode(decode(text)))
+                self.assertEqual(restored['schema_version'],3)
+                self.assertNotIn('match_model',restored)
+                self.assertNotIn('economy_model',restored)
+                self.assertTrue(advance(restored))
+                self.assertEqual(restored['week'],2)
+
     def test_invalid_utf8_primary_cannot_supersede_healthy_backup(self):
         with TemporaryDirectory() as tmp:
             path=Path(tmp)/'career.json'
@@ -47,8 +69,6 @@ class SaveSafety(TestCase):
 
     def test_shipped_synthetic_legacy_saves_round_trip_and_continue(self):
         import gzip
-        import json
-        from kariyer import advance
         fixture=Path(__file__).with_name('testdata')/'schema3-synthetic.json.gz'
         with gzip.open(fixture,'rt',encoding='utf8') as stream:
             cases=json.load(stream)

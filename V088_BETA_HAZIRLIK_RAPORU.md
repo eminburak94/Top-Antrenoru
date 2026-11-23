@@ -1,5 +1,60 @@
 # v0.8.8 Beta hazırlığı · Altıncı tur
 
+## Temiz GitHub klonunda yeniden doğrulama
+
+Bu ek doğrulama, GitHub'daki `701886a` geliştirme ucunu temel aldı. Dalda bulunan arayüz, kayıt ve oynanış düzeltmeleri korundu. Arşiv bağımlılığının nedeni, testlerin Git dışında tutulan `yedek_v*` dizinlerini ve geliştiriciye özgü komşu sürüm klasörlerini varsaymasıydı. 22 başlangıç hatasının dördü aynı testin sürüm alt senaryolarıydı.
+
+Arşivsiz çalışmada tarihsel karşılaştırmalar sürüm adıyla açıkça raporlanıyor. Depodaki yedi sentetik v0.8.6/v0.8.7 kayıt örneği ve arşivsiz veri kontrolleri çalışmaya devam ediyor. Ayrı bir test, çalışma anında üretilen sürümsüz kayıt, şema 1 ve şema 2 örneklerini şema 3'e yükseltiyor ve bir hafta oynatıyor. Tam karşılaştırma için `TOP_ANTRENORU_TEST_ARCHIVE` mutlak yolu kullanılabiliyor. Açıkça yapılandırılmış fakat eksik bir arşivin test hatası verdiği doğrulandı. Beklenen dizinler [testdata/README.md](testdata/README.md) içinde. Yalnızca oyun kaynakları ve gerekli oyun JSON dosyaları kullanıldı.
+
+### Windows kurulumu
+
+- Windows 11 x64 build 26200, CPython 3.12.10 ve Tcl/Tk 8.6.15 ile doğrulandı. Kaynak oyunu ve regresyonu çalıştırmak için ek pip bağımlılığı gerekmiyor. Python kurulumunda Tcl/Tk bileşeni bulunmalı. [Python Windows kurulum belgeleri](https://docs.python.org/3.12/using/windows.html)
+- Klondaki `data.json`, `tarihsel_girisler.json` ve `tarihsel_skorlar.json` dosyaları `oyun.py` yanında bulunmalı. `BASLAT.bat` bu dosyaları ve Tkinter'ı kontrol ediyor. Windows `py` başlatıcısı ve PATH üzerindeki `python` yolu ayrı ayrı çalıştırıldı. Eksik veri senaryosunda başlatıcı dosya adını bildirdi ve 1 koduyla çıktı.
+- `python -m venv --without-pip <geçici-ortam>` ile kurulan, sıfır ek paketli ortamda `python -B -X utf8 oyun.py --check-package <geçici-sonuç.json>` geçti. Aynı kontrol `BASLAT.bat --check-package <geçici-sonuç.json>` ile de geçti.
+- PyInstaller 6.22.3 ile `PAKETLE.bat` üzerinden yerel ve ayrı bir onedir EXE üretildi. EXE ve `_internal` birlikte tutulmalı. EXE, Python içermeyen PATH ve geçici kullanıcı profiliyle çalıştı. Paket içindeki üç JSON'un SHA-256 değerleri kaynak dosyalarla eşleşti. EXE SHA-256 değeri `0f4aee9c389bf12b5d046ee9f14791074d11a203f22cdbe5f8bd2dc2587e94d1`. Paket yerel test çıktısı olarak kaldı.
+
+### Beta işlem zinciri
+
+- Kaynak ve EXE kontrolleri İngilizce arayüzde Fenerbahçe Model 4 kariyeri açtı, 4-3-3'ü uyguladı, transferi tamamladı ve 2D maçı adımlayıp bitirdi. 73 Canvas öğesi, hafta 2, dokuz maç sonucu ve kapatıp açtıktan sonra aynı kayıt durumu doğrulandı.
+- Genel regresyondaki tam sezon senaryosu 34 hafta ve 306 maç sonrası 2001 sezonuna geçti. Kaleci değişikliği, ihraç sonrası diziliş, kayıt/yeniden açma, yedek ve kesintili yazma, 2D oynatma ve TR/EN yerleşim kontrolleri de koşuldu. Dosya seçimi ve onay diyalogları otomasyonda sabitlendi. Oyun işlemleri gerçek kodla çalıştı.
+- Test süreçleri için `LOCALAPPDATA` ve `USERPROFILE` geçici dizinlere yönlendirildi. Bellek içi veya geçici diskte üretilen kariyerler kullanıldı.
+
+### Güncel regresyon ve Beta kararı
+
+İki koşu aynı GitHub klonunda, Tkinter testleri açık ve kullanıcı profili yalıtılmış olarak yapıldı.
+
+| Koşu | Keşfedilen | Geçen | Atlanan test / kayıt | Hata veya başarısızlık |
+|---|---:|---:|---:|---:|
+| Temiz klon, arşivsiz | 157 | 134 | 23 / 26 | 0 |
+| Temiz klon, tam yerel kaynak arşiviyle | 157 | 153 | 4 / 4 | 0 |
+
+Arşivsiz koşudaki 22 tarihsel atlama kaydı 19 test yöntemine karşılık geliyor. `test_v081.test_legacy_saves_continue_with_legacy_models` dört alt senaryo bildiriyor. Tam arşiv koşusunda aşağıdaki tarihsel kontrollerin tümü geçti.
+
+- `test_v060` katalog karşılaştırması ve v0.5.5 kayıt açma, `test_v070` katalog karşılaştırması ve v0.6.0 kayıt açma, `test_v075` eski kayıt bonusu, `test_v076` katalog karşılaştırması ve v0.7.5 kariyer kaydı.
+- `test_v078` eski kayıt ve simülasyon, `test_v079` aylık rapor ve canlı maç eşdeğerliği, `test_v0791` özellik değerleri, `test_v0792` eski motor, `test_v0793` iki eski maç modu ve `test_v080` personel öncesi eşdeğerlik.
+- `test_v081` dört sürüm alt senaryosu, `test_v082` v0.8.1 ekonomi, `test_v084` v0.8.3 kayıt tercihleri, `test_v085` v0.8.4 tekrar, `test_v086` v0.8.5 Model 1/2 tekrar ve `test_v087` v0.8.6 eski model tekrarları.
+
+Her iki koşuda `--long` gerektiren dört test atlandı. Bunlar `test_v060.test_ten_seasons`, `test_v070.test_twenty_five_seasons`, `test_v075.test_fifty_seasons` ve `test_v076.test_careers`. Model 4 tam sezon, 2D ve Beta arayüzü, sentetik ve güncel kayıt güvenliği, transfer ve menajerlik testleri iki koşuda da geçti.
+
+Depo kökünden PowerShell ile aynı koşuyu yeniden üretmek için aşağıdaki komut kullanılabilir. Tam arşiv koşusundan önce `TOP_ANTRENORU_TEST_ARCHIVE` ayarlanır.
+
+```powershell
+@'
+import os, sys, tempfile, unittest
+with tempfile.TemporaryDirectory() as profile:
+    os.environ.update(LOCALAPPDATA=profile, USERPROFILE=profile)
+    sys.argv.append('--gui')
+    suite = unittest.defaultTestLoader.discover('.')
+    sys.exit(not unittest.TextTestRunner(verbosity=2).run(suite).wasSuccessful())
+'@ | python -B -X utf8 -
+```
+
+Otomatik testlerde kaynak veya yerel EXE için engelleyici hata görülmedi. Bağımsız, yeni kurulmuş bir Windows makinesinde kurulum ve insan tester oturumu dağıtım öncesi açık kalan kapılar. Bu denetim mevcut Windows makinesinde yeni, paketsiz Python ortamı ve yalıtılmış kullanıcı profiliyle yapıldı. Fiziksel DPI, çoklu monitör ve başka Windows sürümleri ayrıca doğrulanmadı. Önceki maç kalibrasyonu ve uzun kariyer dengesi riskleri bu turun kapsamı dışındaydı.
+
+---
+
+## Önceki doğrulama kayıtları
+
 ## Temiz kopyadaki 22 hata
 
 Tur başındaki 2c4c608 Git ağacından arşivsiz temiz kopya çıkarıldı. 138 test keşfedildi, 22 hata ve 6 koşullu atlama çıktı. Dört hata tek bir testin farklı sürüm alt senaryolarıydı. Hatalı çağrılar Git'te bulunmayan yedek_v dizinleri ve komşu eski sürüm klasörleri üzerinden veri okuyor veya Python çalıştırıyordu.
