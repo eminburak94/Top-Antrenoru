@@ -135,14 +135,16 @@ def prepare_player(s,p,team,fitness_bonus=None,programme=None):
         from personel import effects, team_training
         if fitness_bonus is None:fitness_bonus=effects(s,team)[0]
         if programme is None:programme=team_training(s,team)
+    age = age_at(p, s['year'], s['week'])
+    plan = None
+    if user_club:
+        from antrenman import apply_plan, plan_for, recent_minutes
+        # Select recovery before the ordinary weekly recovery masks low condition.
+        plan = plan_for(s,p,z,age)
     z['condition'] = min(100,z['condition'] + fitness_bonus + (28 if user_club and programme=='Rest' else 23))
     z['morale'] += (70 - z['morale']) * .10
-    age = age_at(p, s['year'], s['week'])
-    if user_club:
-        from antrenman import apply_plan, plan_for
-        plan = plan_for(s,p,z,age)
-        if plan:
-            return apply_plan(z,*plan,age)
+    if plan:
+        return apply_plan(z,*plan,age,recent_minutes(s,p['id']))
     if user_club and programme=='Development' and isinstance(age, int) and age < 25:
         z['training_weeks'] = z.get('training_weeks',0) + 1
         z['condition'] = max(40, z['condition'] - 4)

@@ -114,10 +114,12 @@ class PlaybackTests(TestCase):
         press.event_generate('<<ComboboxSelected>>')
         root.update()
         self.assertEqual(match.instructions[match.human][0],1)
-        self.assertTrue(any(w.cget('text').startswith('Sent to match engine') for w in descendants(window)
+        self.assertTrue(any(w.cget('text').startswith('Order 0′ · Awaiting 1′') for w in descendants(window)
                             if isinstance(w,ttk.Label)))
         button(window,'Start').invoke()
         button(window,'Pause').invoke()
+        self.assertTrue(any(w.cget('text').startswith('Order 0′ · Applied 1′') for w in descendants(window)
+                            if isinstance(w,ttk.Label)))
         minute=match.minute
         self.assertFalse(root.tk.call('after','info'))
         self.assertEqual(match.minute,minute)

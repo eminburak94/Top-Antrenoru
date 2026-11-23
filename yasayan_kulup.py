@@ -21,7 +21,9 @@ def setup(s):
 def begin_spell(s):
     club=s['club']
     life=s['living_club']
-    life['board']=dict(club=club,form=[],sport=0,fiscal=0,risk=0,meeting=0,used_recovery=False)
+    life['board']=dict(club=club,form=[],sport=0,fiscal=0,risk=(100-s['confidence'])//3,
+                       meeting=0,used_recovery=False)
+    life.pop('match_review',None)
     for key in ('question','promise','recovery'):
         life.pop(key,None)
 
@@ -148,13 +150,17 @@ def settle_promises(s,club,points):
         del life[key]
 
 
-def review(s,club,points):
+def review(s,club,points,support=None):
     life=s['living_club']
     board=life['board']
     form=board['form']
+    trust_before=s['confidence']
+    previous=board['risk'] if form or board['risk'] else (100-trust_before)//3
+    old_sport,old_fiscal=board['sport'],board['fiscal']
     form.append(points)
     del form[:-6]
     settle_promises(s,club,points)
+    pledge_delta=s['confidence']-trust_before
     target=s['board_targets'][club]
     rank=standings(s).index(club)+1
     target_rate=1.75 if target<=4 else 1.4 if target<=9 else 1.1 if target<=13 else .9
@@ -169,8 +175,14 @@ def review(s,club,points):
     if under and board['sport']>=3:delta-=2
     if stress:delta-=2
     s['confidence']=clamp(s['confidence']+delta,0,100)
-    previous=board['risk']
     board['risk']=clamp((100-s['confidence'])//3+board['sport']*7+board['fiscal']*8,0,100)
+    if support is not None:
+        opponent,goals,conceded,fan_before=support
+        life['match_review']=dict(week=s['week']-1,opponent=opponent,goals=goals,conceded=conceded,
+            trust=s['confidence']-trust_before,risk=board['risk']-previous,
+            fans=life['fans'][club][0]-fan_before,sport=board['sport']-old_sport,
+            fiscal=board['fiscal']-old_fiscal,under=under,stress=stress,
+            pledge=pledge_delta)
     if previous<58<=board['risk']:
         brief(s,'board_warning',club,week=s['week']-1)
     played=s['week']-1
@@ -191,9 +203,10 @@ def record_week(s,results):
         for home in (True,False):
             team,opponent=(match['home'],match['away']) if home else (match['away'],match['home'])
             goals,conceded=(match['x'],match['y']) if home else (match['y'],match['x'])
+            fan_before=s['living_club']['fans'][team][0]
             points=update_support(s,team,opponent,goals,conceded)
             if s['employed'] and team==s['club']:
-                review(s,team,points)
+                review(s,team,points,(opponent,goals,conceded,fan_before))
 
 
 def press_answer(s,choice):

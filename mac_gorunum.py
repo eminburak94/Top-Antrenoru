@@ -87,7 +87,10 @@ class Pitch:
             c.coords(bead,px-radius,draw_y-radius,px+radius,draw_y+radius)
             c.coords(label,px,draw_y)
             c.tag_raise(label)
-            c.itemconfigure(bead,outline='#fff6ce' if carrier and carrier[1]==pid else '#142636')
+            substitution=len(frame)>4 and frame[4].get('substitution')==pid
+            c.itemconfigure(bead,outline='#f1d985' if substitution else
+                            '#fff6ce' if carrier and carrier[1]==pid else '#142636',
+                            width=3 if substitution else 2)
         for pid in set(self.items)-used:
             for item in self.items.pop(pid):c.delete(item)
         if self.ball is None:self.ball=c.create_oval(0,0,1,1,fill='#fcfcff',outline='#132b32',width=2)
@@ -141,7 +144,7 @@ def interpolate(frames, bridge=False):
                     if len(end)>3:
                         point+=(end[3] if end[3]==start[3] else None,)
                     if len(end)>4:
-                        meta=start[4]
+                        meta={key:value for key,value in start[4].items() if key not in ('delivery','substitution')}
                         if meta.get('action'):meta=meta | {'action':None}
                         point+=(meta,)
                     result.append(point)

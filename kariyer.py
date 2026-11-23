@@ -204,7 +204,7 @@ def complete_week(s, plans, rng_state, user_match=None, feedback_before=None, ob
         accumulate(s['season_stats'],row)
         rows.append(row)
     if feedback_before is not None:
-        record_week(s, feedback_before, rows)
+        record_week(s, feedback_before, rows, observations)
         record_month(s,s['weekly_feedback'],observations or {})
         if 'individual_training' in s:
             s['individual_training'] = {pid: plan for pid,plan in s['individual_training'].items()

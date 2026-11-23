@@ -14,10 +14,20 @@ def plan_for(s, p, z, age):
         return None
     if z['injury'] or z['condition'] < 70:
         return 'recovery', 'normal'
+    if isinstance(age,int) and age < 25 and recent_minutes(s,p['id']) == 0:
+        return 'technical', 'normal'
     return ('general', 'normal') if isinstance(age,int) and age < 25 else None
 
 
-def apply_plan(z, focus, intensity, age):
+def recent_minutes(s, pid):
+    report = s.get('weekly_feedback', {})
+    if (report.get('year'), report.get('week'), report.get('club')) != (
+            s['year'], s['week'] - 1, s['club']):
+        return None
+    return report.get('players', {}).get(pid, {}).get('minutes')
+
+
+def apply_plan(z, focus, intensity, age, match_minutes=None):
     level = INTENSITIES.index(intensity)
     before = z['condition']
     credit = 0
@@ -29,7 +39,9 @@ def apply_plan(z, focus, intensity, age):
     else:
         load, weight = {'general': (3,.85), 'technical': (2,.9),
                         'physical': (5,1.), 'tactical': (2,.8)}[focus]
-        z['condition'] = max(35,before-max(1,load+(-2,0,3)[level]))
+        # A full match makes an intensive session more costly. Training credit is unchanged.
+        extra = 2 if level == 2 and match_minutes is not None and match_minutes >= 60 else 0
+        z['condition'] = max(35,before-max(1,load+(-2,0,3)[level]+extra))
         if isinstance(age,int) and age < 25:
             credit = round(weight*(.65,.9,1.)[level],3)
             z['training_weeks'] = round(z.get('training_weeks',0)+credit,3)

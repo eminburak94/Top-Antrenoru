@@ -20,7 +20,7 @@ from yerellestirme import position_code,  country_label, position_label, citizen
 from kayit import save_game, load_game, autosave, backup_path, SaveError
 from yonetim import squad_review
 from yonetim_metinleri import TEXT
-from antrenman import FOCUSES, INTENSITIES
+from antrenman import FOCUSES, INTENSITIES, recent_minutes
 
 from mevkiler import LAYOUTS, POSITION_NAMES, FIT_NAMES, coordinates, fit_level, label as detail_position
 
@@ -40,9 +40,9 @@ from kayit import user_directory
 
 class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews,ClubLifeViews):
  def __init__(self,r):
-  self.r=r;self.s=None;self.lang='TR';r.title('Top Antrenörü v0.9.3 Playtest Beta');r.geometry('1200x760');r.minsize(960,600);r.configure(bg=THEME['base'])
+  self.r=r;self.s=None;self.lang='TR';r.title('Top Antrenörü v0.9.4 Playtest Beta');r.geometry('1200x760');r.minsize(960,600);r.configure(bg=THEME['base'])
   install(r)
-  self.head=tk.Label(r,bg=THEME['base'],fg=THEME['accent'],font=(FONT,19,'bold'),pady=11);self.head.pack(fill='x');self.nav=ttk.Frame(r,padding=8);self.nav.pack(fill='x');self.body=ttk.Frame(r,padding=16);self.body.pack(fill='both',expand=True);self.status=tk.Label(r,bg=THEME['base'],fg=THEME['muted'],anchor='w',padx=16,pady=8,text='TOP ANTRENÖRÜ  |  2000–2001  |  v0.9.3 Playtest Beta');self.status.pack(side='bottom',fill='x');self.start()
+  self.head=tk.Label(r,bg=THEME['base'],fg=THEME['accent'],font=(FONT,19,'bold'),pady=11);self.head.pack(fill='x');self.nav=ttk.Frame(r,padding=8);self.nav.pack(fill='x');self.body=ttk.Frame(r,padding=16);self.body.pack(fill='both',expand=True);self.status=tk.Label(r,bg=THEME['base'],fg=THEME['muted'],anchor='w',padx=16,pady=8,text='TOP ANTRENÖRÜ  |  2000–2001  |  v0.9.4 Playtest Beta');self.status.pack(side='bottom',fill='x');self.start()
  def tr(self,a,b):return a if self.lang=='TR' else b
  def management_text(self,key,**values):
   return self.tr(*TEXT[key]).format(**values)
@@ -172,7 +172,7 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews,ClubLifeViews):
         [('Mali döküm','Financial breakdown',self.finance_page)])
   training_bar=panel(5,tr('Antrenman ve ekip','Training and staff'),
         tr('Haftalık plan ve oyuncu gelişim raporları','Weekly plans and player development reports'),
-        [('Antrenman','Training',self.monthly_page),('Haftalık rapor','Weekly report',self.weekly_page)])
+        [('Antrenman','Training',self.training_page),('Haftalık rapor','Weekly report',self.weekly_page)])
   programs={'Normal':tr('Normal','Normal'),'Rest':tr('Dinlenme','Rest'),'Development':tr('Gelişim','Development')}
   choice=ttk.Combobox(training_bar,values=list(programs.values()),width=10,state='readonly')
   choice.current(list(programs).index(team_training(s,club)))
@@ -271,6 +271,11 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews,ClubLifeViews):
    if z['injury']:alerts.append(msg('injury',count=z['injury']))
    if z['condition']<70:alerts.append(msg('fatigue'))
    if isinstance(z['age'],int) and z['age']<25:alerts.append(msg('youth'))
+   if 'session' in z:
+    focus,intensity,status,delta=z['session']
+    outcome={'trained':self.tr('çalıştı','trained'),'recovered':self.tr('toparlandı','recovered'),
+             'injured':self.tr('sakatlık nedeniyle katılmadı','missed through injury')}
+    alerts.append(f"{msg(focus)} / {msg(intensity)} · {outcome[status]} · {delta:+g}")
    rows.append((p['name'],z['minutes'],change(z['minute_change']),
                 f"{z['condition']}% ({change(z['condition_change'])})",
                 round(z['morale']),f"{z['form']} ({change(z['form_change'])})",
@@ -420,13 +425,21 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews,ClubLifeViews):
  def contract_cells(self,p):
   expiry,years,months=contract_time(self.s,p)
   return expiry.isoformat(),f"{years} {self.tr('y','yr')} {months} {self.tr('ay','mo')}"
- def training_page(self, ids):
+ def training_page(self, ids=None):
   if 'manager_state' in self.s and not self.s['employed']:return self.employment_page()
   self.clear()
   s=self.s; msg=self.management_text
-  people=[p for p in roster(s['club'],s['year'],s) if p['id'] in ids]
-  ttk.Label(self.body,text=msg('individual')).pack(anchor='w')
+  people=[p for p in roster(s['club'],s['year'],s) if ids is None or p['id'] in ids]
+  ttk.Label(self.body,text=self.tr('Haftalık antrenman planı','Weekly training plan')).pack(anchor='w')
   ttk.Label(self.body,text=msg('training_explain'),wraplength=820).pack(anchor='w',pady=8)
+  ttk.Label(self.body,text=self.tr(
+   'Son lig maçında 60+ dakika oynayanlarda yoğun çalışma 2 ek kondisyon puanı tüketebilir. '
+   'Otomatik plan, dinç genç yedeklere son maçta oynamadılarsa teknik çalışma verir. '
+   'Toparlanma kondisyonu artırır, gelişim puanı vermez.',
+   'Intense work can cost two extra condition points after 60+ minutes in the last league match. '
+   'Automatic planning assigns technical work to fit young players who missed that match. '
+   'Recovery restores condition without adding development credit.'
+  ),wraplength=820).pack(anchor='w')
   plans=s.setdefault('individual_training',{})
   enabled=tk.BooleanVar(value=s.get('auto_training',False))
   ttk.Checkbutton(self.body,text=msg('automatic'),variable=enabled,
@@ -440,7 +453,9 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews,ClubLifeViews):
   focus.pack(side='left'); speed.pack(side='left',padx=6)
   def apply():
    if not s['employed']:return
-   for p in people:
+   selection=grid.selection()
+   subjects=[people[int(i)] for i in selection] if selection else people
+   for p in subjects:
     if focus.current()==len(FOCUSES):
      plans.pop(p['id'],None)
     else:
@@ -449,9 +464,18 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews,ClubLifeViews):
   self.button(panel,*TEXT['assign'],apply).pack(side='left')
   self.button(panel,*TEXT['monthly_title'],self.monthly_page).pack(side='left',padx=4)
   self.button(panel,*TEXT['back_squad'],self.squad).pack(side='left',padx=4)
-  self.tree([msg('player'),msg('focus'),msg('intensity')],
-            [(p['name'],msg(plans[p['id']][0]) if p['id'] in plans else msg('inherit'),
-              msg(plans[p['id']][1]) if p['id'] in plans else '—') for p in people],wide=True)
+  rows=[]
+  for p in people:
+   pid=p['id']; fitness=s['fitness'][pid]; minutes=recent_minutes(s,pid)
+   cue=(self.tr('Sakat','Injured') if fitness['injury'] else
+        self.tr('Toparlanma önerilir','Recovery recommended') if fitness['condition']<70 else
+        self.tr('Yükü izle','Monitor load') if minutes is not None and minutes>=60 else
+        self.tr('Maç pratiği eksik','Lacks match practice') if minutes==0 else '—')
+   focus_key,intensity=plans.get(pid,('inherit',None))
+   rows.append((p['name'],msg(focus_key),msg(intensity) if intensity else '—',
+                f"{fitness['condition']}%",minutes if minutes is not None else '—',cue))
+  grid=self.tree([msg('player'),msg('focus'),msg('intensity'),self.tr('Kondisyon','Condition'),
+             self.tr('Son maç dk.','Last match min.'),self.tr('Hazırlık notu','Readiness note')],rows,wide=True)
  def monthly_page(self):
   self.clear()
   s=self.s; msg=self.management_text
@@ -1099,11 +1123,12 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews,ClubLifeViews):
      if key in TACTICAL_OPTIONS and type(v) is int and -1<=v<=1:
       return TACTICAL_OPTIONS[key][2 if self.lang=='TR' else 3][v+1]
      return str(v)
-    audit.insert('end',f"{minute}′ {(home,away)[side]} · {keys[key]} {label(old)} → {label(value)}")
+    effective=minute+(1 if self.s.get('match_model') in (2,3,4) else 5)
+    audit.insert('end',f"{minute}′ → {effective}′ · {(home,away)[side]} · {keys[key]} {label(old)} → {label(value)}")
    role_changes=data.get('role_changes',[])
    for minute,side,pid,old,new in role_changes:
     name=player(self.s,pid)['name']
-    audit.insert('end',f"{minute}′ {(home,away)[side]} · {name} · {self.tr(*TACTICAL_ROLES[old][:2])} → {self.tr(*TACTICAL_ROLES[new][:2])}")
+    audit.insert('end',f"{minute}′ → {minute+1}′ · {(home,away)[side]} · {name} · {self.tr(*TACTICAL_ROLES[old][:2])} → {self.tr(*TACTICAL_ROLES[new][:2])}")
    if 'advanced_regains' in data:
     a,b=data['advanced_regains']
     audit.insert('end',f"{self.tr('İleri bölgede top kazanma','Advanced recoveries')} · {a}–{b}")
@@ -1111,14 +1136,20 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews,ClubLifeViews):
    if changes and 'play' in match:
     audit.insert('end',self.tr('Müdahale çevresi · Şut (isabet) · Ev–dep',
                               'Around changes · Shots (on target) · Home–away'))
+    audit.insert('end',self.tr('İlk dakika talimat, ikinci dakika motor adımı. Ölçümler nedensellik göstermez.',
+                              'First minute is the order, second is the engine step. These figures do not establish causation.'))
     for minute in sorted(changes):
      first,last=max(1,minute-4),min(90,minute+5)
      def attempts(start,end):
-      shots=[0,0];target=[0,0]
+      shots=[0,0];target=[0,0];passes=[0,0];completed=[0,0]
       for tick,side,_,event,_ in match['play']:
-       if start<=tick<=end and event in SHOT_EVENTS:
-        shots[side]+=1;target[side]+=event not in ('wide','blocked')
-      return '–'.join(f'{a} ({b})' for a,b in zip(shots,target))
+       if start<=tick<=end:
+        if event in SHOT_EVENTS:
+         shots[side]+=1;target[side]+=event not in ('wide','blocked')
+        if event in ('pass','pass_failed'):
+         passes[side]+=1;completed[side]+=event=='pass'
+      return ('–'.join(f'{a} ({b})' for a,b in zip(shots,target))
+              +' · '+self.tr('Pas','Passes')+' '+'–'.join(f'{a}/{b}' for a,b in zip(completed,passes)))
      before=f'{first}–{minute}′ {attempts(first,minute)}' if minute else '—'
      audit.insert('end',f"{minute}′ · {before}  →  {minute+1}–{last}′ {attempts(minute+1,last)}")
    metrics=self.tr('Dakika · Şut · Duran hücum · Yük','Minute · Shots · Stopped attacks · Load')
@@ -1130,6 +1161,11 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews,ClubLifeViews):
                      (self.tr('Top kazanma','Recoveries'),'recoveries')):
      a,b=flow[key];audit.insert('end',f'{label} · {a}–{b}')
     metrics=self.tr('Dakika · Şut · Top kazanma · Yük','Minute · Shots · Recoveries · Load')
+   if 'zones' in data:
+    audit.insert('end',self.tr('Topa sahip olunan adımlar · Savunma / orta / hücum üçte biri',
+                              'Possession steps · Defensive / middle / attacking third'))
+    for team,zones in zip((home,away),data['zones']):
+     audit.insert('end',team+' · '+' / '.join(map(str,zones)))
    if self.s.get('match_model') in (3,4):
     events=Counter(row[3] for row in match.get('play',[]))
     labels=(('foul','Faul','Foul'),('offside','Ofsayt','Offside'),('corner','Korner','Corner'),
@@ -1194,7 +1230,11 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews,ClubLifeViews):
   w=tk.Toplevel(self.r);w.title(self.tr('Maç merkezi','Match centre'))
   width=min(1500,max(850,self.r.winfo_width()-35))
   height=min(900,max(550,self.r.winfo_height()-58))
-  w.geometry(f'{width}x{height}');w.minsize(800,510);w.transient(self.r);w.grab_set()
+  width=min(width,self.r.winfo_screenwidth()-40)
+  height=min(height,self.r.winfo_screenheight()-80)
+  x=max(0,min(self.r.winfo_rootx(),self.r.winfo_screenwidth()-width-20))
+  y=max(0,min(self.r.winfo_rooty(),self.r.winfo_screenheight()-height-60))
+  w.geometry(f'{width}x{height}+{x}+{y}');w.minsize(760,440);w.transient(self.r);w.grab_set()
   f=ttk.Frame(w,padding=10);f.pack(fill='both',expand=True)
   header=ttk.Frame(f);header.pack(fill='x')
   score=ttk.Label(header,style='Title.TLabel')
@@ -1203,7 +1243,7 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews,ClubLifeViews):
   for team,color in zip((m.a,m.b),('#44dfce','#ff9c63')):
    tk.Label(names,text=team,bg=THEME['panel'],fg=color,font=(FONT,10,'bold')).pack(side='left',padx=8)
   live_status=ttk.Label(header);live_status.pack()
-  bar=ttk.Frame(f);bar.pack(side='bottom',fill='x',pady=(5,0))
+  bar=ttk.Frame(f);bar.pack(side='top',fill='x',pady=(5,0))
   style=tk.StringVar(value=m.style)
   cb=ttk.Combobox(bar,textvariable=style,values=['Balanced','Attack','Defend'],state='readonly',width=13)
   cb.bind('<<ComboboxSelected>>',lambda _:setattr(m,'style',style.get()))
@@ -1224,10 +1264,31 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews,ClubLifeViews):
   key_events=SHOT_EVENTS | {'yellow','red','second_yellow','offside','foul','advantage',
               'corner','penalty','freekick','indirect','throw','rebound'}
   applied=ttk.Label(f,style='Warning.TLabel',wraplength=700)
-  applied.pack(side='bottom',anchor='w')
-  def change(key,value,label,selection):
+  applied.pack(before=stage,side='top',anchor='w')
+  caption=ttk.Label(f,wraplength=700)
+  caption.pack(before=stage,side='top',anchor='w')
+  def pending_orders(issued):
+   return sum(row[0]==issued and row[1]==m.human
+              for key in ('decisions','role_changes') for row in m.analysis.get(key,()))
+  def requested():
+   if not pending_orders(m.minute):
+    applied.configure(text=self.tr('Bekleyen talimat yok','No pending orders'))
+    return
+   effective=m.minute+(1 if m.positional else 5)
+   applied.configure(text=self.tr('Talimat {issued}′ · Uygulama {effective}′ bekleniyor',
+                                  'Order {issued}′ · Awaiting {effective}′').format(
+                                     issued=m.minute,effective=effective))
+  def advance_minute():
+   issued=m.minute
+   changes=pending_orders(issued)
+   m.step()
+   if changes:
+    applied.configure(text=self.tr('Talimat {issued}′ · Uygulandı {effective}′ ({count})',
+                                   'Order {issued}′ · Applied {effective}′ ({count})').format(
+                                      issued=issued,effective=m.minute,count=changes))
+  def change(key,value):
    if m.instruction(key,value):
-    applied.configure(text=self.tr('Motora iletildi','Sent to match engine')+f' · {m.minute}′ · {label}: {selection}')
+    requested()
   yscroll.pack(side='right',fill='y');log.pack(fill='both',expand=True)
   stats=ttk.Label(stats_box,wraplength=200);stats.pack(anchor='w')
   renderer=Pitch(pitch,lambda pid:m.s.get('numbers',{}).get(pid,player(m.s,pid)['number']),
@@ -1244,15 +1305,15 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews,ClubLifeViews):
   if m.rules:
    ttk.Checkbutton(bar,text=self.tr('Ses','Sound'),variable=sound)
   if spatial:
-   tactical=ttk.Frame(f);tactical.pack(before=bar,side='bottom',fill='x')
+   tactical=ttk.Frame(f);tactical.pack(before=applied,side='top',fill='x')
    for key,tr_name,en_name in [('press','Pres','Press'),('tempo','Tempo','Tempo'),('width','Genişlik','Width')]:
     ttk.Label(tactical,text=self.tr(tr_name,en_name)).pack(side='left',padx=4)
     control=ttk.Combobox(tactical,values=[self.tr('Düşük','Low'),self.tr('Normal','Normal'),self.tr('Yüksek','High')],state='readonly',width=8)
     control.current(m.instructions[m.human][('press','tempo','width').index(key)]+1);control.pack(side='left')
-    control.bind('<<ComboboxSelected>>',lambda _,key=key,c=control,label=self.tr(tr_name,en_name):change(key,c.current()-1,label,c.get()))
+    control.bind('<<ComboboxSelected>>',lambda _,key=key,c=control:change(key,c.current()-1))
    cb.configure(values=[self.management_text(key) for key in STYLES])
    cb.current(STYLES.index(m.style))
-   cb.bind('<<ComboboxSelected>>',lambda _:change('style',STYLES[cb.current()],self.tr('Yaklaşım','Approach'),cb.get()))
+   cb.bind('<<ComboboxSelected>>',lambda _:change('style',STYLES[cb.current()]))
   rating_line=ttk.Label(stats_box,wraplength=200);rating_line.pack(anchor='w',pady=8)
   frame_delay=55
   def show_score(minute,pair=None,action=None):
@@ -1267,6 +1328,11 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews,ClubLifeViews):
    frame_delay=780 if action in SHOT_EVENTS else 55
    renderer.draw(frame)
    show_score(frame[0],meta.get('score'),action)
+   if action in SHOT_EVENTS:
+    caption.configure(text=f'{frame[0]}′ · {self.shot_label(action)}')
+   if 'delivery' in meta:
+    passer,receiver=(player(m.s,pid)['name'] for pid in meta['delivery'])
+    caption.configure(text=f"{frame[0]}′ · {self.tr('Pas','Pass')} · {passer} → {receiver}")
    if action=='goal' and sound.get():w.bell()
   shown_log=None
   shown=[0,0]
@@ -1292,6 +1358,8 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews,ClubLifeViews):
    stats.configure(text=totals)
    nonlocal shown_log
    current_log=m.play[-35:]
+   if current_log:
+    caption.configure(text=self.commentary(current_log[-1],(m.a,m.b)))
    if current_log!=shown_log:
     shown_log=current_log
     log.configure(state='normal')
@@ -1325,7 +1393,7 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews,ClubLifeViews):
     complete()
     return
    before=len(m.play)
-   m.step()
+   advance_minute()
    events={row[3] for row in m.play[before:]}
    audible={'offside','foul','penalty'}
    if not (m.tactical_ai and m.capture):audible.add('goal')
@@ -1375,7 +1443,7 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews,ClubLifeViews):
    try:
     for _ in range(8 if m.positional else 3):
      if m.minute==90:break
-     m.step()
+     advance_minute()
    finally:
     m.capture=capture
    refresh()
@@ -1430,10 +1498,16 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews,ClubLifeViews):
    def apply():
     if a.current()>=0 and b.current()>=0 and m.substitute(ls[a.current()]['id'],candidates[b.current()]['id']):
      frames.clear()
+     event=m.play[-1]
      close()
      if m.capture and m.positional:
-      m.pitch.align();m.pitch.frame();draw(m.frames[-1])
+      m.pitch.align();m.pitch.frame()
+      frame=m.frames[-1]
+      if len(frame)>4:
+       frame=(*frame[:4],frame[4] | {'substitution':event[2]})
+      draw(frame)
      refresh()
+     caption.configure(text=self.commentary(event,(m.a,m.b)))
     else:messagebox.showinfo('Top Antrenörü',self.tr('Değişiklik yapılamadı.','Substitution unavailable.'),parent=d)
    ttk.Button(d,text=self.tr('Uygula','Apply'),command=apply).pack(pady=8)
   self.button(bar,'Oyuncu değiştir','Substitute',sub)
@@ -1445,10 +1519,7 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews,ClubLifeViews):
   if m.team_orders is not None and m.human is not None:
    def live_plan():
     pause()
-    def confirmed():
-     applied.configure(text=self.tr('Taktik veya rol değişikliği bir sonraki dakikada uygulanır.',
-                                    'Tactical or role changes take effect next minute.'))
-    self.tactical_plan_page(m,parent=w,on_apply=confirmed)
+    self.tactical_plan_page(m,parent=w,on_apply=requested)
    self.button(bar,'Taktik planı','Tactical plan',live_plan)
   wrap_controls(bar)
   w.protocol('WM_DELETE_WINDOW',lambda:messagebox.showinfo('Top Antrenörü',self.tr('Önce maçı bitir.','Finish match first.')))
@@ -1499,7 +1570,7 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews,ClubLifeViews):
     messagebox.showerror('Top Antrenörü',self.tr('Kayıt yazılamadı.','Save could not be written.'))
  def load(self):
   folder=user_directory()/'saves'
-  previous=[user_directory().parent/version/'saves' for version in ('v0.9.2','v0.9.1','v0.9.0','v0.8.9','v0.8.8','v0.8.7','v0.8.6','v0.8.5','v0.8.4','v0.8.3')]
+  previous=[user_directory().parent/version/'saves' for version in ('v0.9.3','v0.9.2','v0.9.1','v0.9.0','v0.8.9','v0.8.8','v0.8.7','v0.8.6','v0.8.5','v0.8.4','v0.8.3')]
   legacy=Path.home()/'TopAntrenoru'/'saves'
   initial=next((item for item in (folder,*previous,legacy) if item.is_dir()),Path.home())
   path=filedialog.askopenfilename(filetypes=[('JSON','*.json')],initialdir=initial)

@@ -29,6 +29,7 @@ class PitchState:
         self.last_pass=None
         self.trace=deque(maxlen=180)
         self.counters={key:[0,0] for key in ('possession','passes','completed','turnovers','recoveries')}
+        self.zones=[[0,0,0],[0,0,0]]
         self.partial_shots=[0,0]
         self.partial_recovery=[0,0]
 
@@ -146,6 +147,9 @@ class PitchState:
         self.owner=None
         self.ball=((x+dest[0])*.5,(y+dest[1])*.5)
         self.frame()
+        if m.capture and m.team_orders is not None:
+            flight=m.frames[-1]
+            m.frames[-1]=(*flight[:4],flight[4] | {'delivery':(pid,target)})
         success=m.rng.random()<threshold
         if m.capture:
             self.trace.append(dict(minute=m.minute,player=pid,target=target,
@@ -287,6 +291,7 @@ class PitchState:
             self.counters['possession'][side]+=1
             x,y=self.ball
             depth=x if side==0 else 1-x
+            self.zones[side][min(2,max(0,int(depth*3)))]+=1
             nearest=self.nearest(1-side,self.ball,True)
             distance=math.dist(self.xy[nearest],self.ball) if nearest else .8
             pressure=max(0,1-distance/.24)

@@ -207,6 +207,12 @@ def validate(s):
                           form_change=(-10,10), training=(0,1))
             require(all(key in row and (row[key] is None or numeric(row[key], *bounds))
                         for key,bounds in deltas.items()), 'Invalid weekly deltas')
+            if 'session' in row:
+                from antrenman import FOCUSES, INTENSITIES
+                session=row['session']
+                require(isinstance(session,list) and len(session)==4 and session[0] in FOCUSES
+                        and session[1] in INTENSITIES and session[2] in ('trained','recovered','injured')
+                        and numeric(session[3],-100,100),'Invalid weekly training session')
     validate_training(s, P)
     validate_staff(s, P)
     validate_manager(s)
@@ -318,6 +324,12 @@ def validate_manager(s):
             rows=audit['advanced_regains']
             require(s.get('tactics_model')==1 and isinstance(rows,list) and len(rows)==2
                     and all(integer(v,0,90) for v in rows),'Invalid advanced recoveries')
+        if 'zones' in audit:
+            zones=audit['zones']
+            require('flow' in audit and s.get('match_model')==4 and isinstance(zones,list) and len(zones)==2
+                    and all(isinstance(row,list) and len(row)==3 and all(integer(n,0,90) for n in row)
+                            and sum(row)==total for row,total in zip(zones,audit['flow']['possession'])),
+                    'Invalid possession zones')
         if 'role_changes' in audit:
             from taktik import ROLES
             rows=audit['role_changes']
@@ -569,6 +581,13 @@ def validate_living_club(s):
             row=life[key]
             require(isinstance(row,list) and len(row)==2 and integer(row[0],1,3)
                     and integer(row[1],0,(3-row[0])*3),'Invalid club commitment')
+    if 'match_review' in life:
+        row=life['match_review']
+        require(isinstance(row,dict) and row.get('opponent') in TEAMS
+                and integer(row.get('week'),1,34)
+                and all(integer(row.get(k),0,100) for k in ('goals','conceded'))
+                and all(integer(row.get(k),-100,100) for k in ('trust','risk','fans','sport','fiscal','pledge'))
+                and all(type(row.get(k)) is bool for k in ('under','stress')),'Invalid club match review')
     if 'question' in life:
         row=life['question']
         require(isinstance(row,list) and len(row)==5 and row[0]==s['year'] and integer(row[1],1,34)
@@ -640,7 +659,7 @@ def load_game(path):
 
 def user_directory():
     local=os.environ.get('LOCALAPPDATA')
-    return (Path(local) if local else Path.home()) / 'TopAntrenoru' / 'v0.9.3'
+    return (Path(local) if local else Path.home()) / 'TopAntrenoru' / 'v0.9.4'
 
 
 def autosave(s, directory=None):

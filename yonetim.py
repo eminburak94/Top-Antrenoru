@@ -10,7 +10,7 @@ def weekly_snapshot(s):
             for p in roster(club, s['year'], s)}
 
 
-def record_week(s, before, results):
+def record_week(s, before, results, observations=None):
     club, year, week = (s[k] for k in ('club', 'year', 'week'))
     result = next((r for r in results if club in (r['home'], r['away'])), None)
     if result is None:
@@ -35,6 +35,9 @@ def record_week(s, before, results):
             training=round(now.get('training_weeks',0)-old.get('training_weeks',0),3) if old is not None else None,
             age=age_at(p,year,week),
         )
+        if pid in (observations or {}):
+            focus,intensity,status,_,condition=observations[pid]
+            players[pid]['session']=[focus,intensity,status,condition]
     s['weekly_feedback'] = dict(club=club, year=year, week=week, players=players)
 
 

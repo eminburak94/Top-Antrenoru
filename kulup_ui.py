@@ -48,6 +48,22 @@ class ClubLifeViews:
                       'Sporting pressure {sport}/8 · Financial pressure {fiscal}/8 · Recent points: {form}').format(
                           sport=row['sport'],fiscal=row['fiscal'],form=' · '.join(map(str,row['form'])) or '—'))
         plan=projection(s,club)
+        latest=model.get('match_review')
+        if latest:
+            status=tr('Son maç {opponent} · {goals}–{conceded} · Güven {trust:+d} · Risk {risk:+d}',
+                      'Last match {opponent} · {goals}–{conceded} · Confidence {trust:+d} · Risk {risk:+d}')
+            line(board,status.format(**latest))
+            line(board,tr('Sportif baskı {sport:+d} · Mali baskı {fiscal:+d}',
+                          'Sporting pressure {sport:+d} · Financial pressure {fiscal:+d}').format(**latest))
+            if latest['under']:
+                line(board,tr('Lig sırası ve son maç puanları hedefin altında.',
+                              'League position and recent points fell short of the target.'))
+            if latest['stress']:
+                line(board,tr('Nakit veya maaş baskısı risk değerlendirmesine girdi.',
+                              'Cash or wage pressure affected the risk assessment.'))
+            if latest['pledge']:
+                line(board,tr('Tamamlanan taahhüdün güvene etkisi','Confidence effect of resolved commitments')
+                     +f" {latest['pledge']:+d}")
         line(board,tr('Sezon sonu nakit tahmini','Projected season-end cash')+' · '+money(s,plan['closing']))
         ready=s['employed'] and (not row['meeting'] or s['week']-row['meeting']>=6)
         if row['meeting'] and not ready:
@@ -76,6 +92,16 @@ class ClubLifeViews:
         line(support,tr('Taraftar güveni','Supporter confidence'),True)
         ttk.Progressbar(support,maximum=100,value=score,length=400).pack(anchor='w')
         line(support,f'{score}/100 · {tr("Son tepki","Latest reaction")} {change:+d}')
+        if latest:
+            goals,conceded=latest['goals'],latest['conceded']
+            result=(tr('Galibiyet','Win') if goals>conceded else
+                    tr('Mağlubiyet','Defeat') if goals<conceded else tr('Beraberlik','Draw'))
+            context=[result,f"{latest['opponent']} {goals}–{conceded}"]
+            if club in life.ISTANBUL_RIVALS and latest['opponent'] in life.ISTANBUL_RIVALS:
+                context.append(tr('derbi','derby'))
+            if abs(goals-conceded)>=3:context.append(tr('farklı skor','wide margin'))
+            if abs(run)>=3:context.append(tr('sonuç serisi','run of results'))
+            line(support,' · '.join(context)+f" · {tr('Son maç tepkisi','Last match reaction')} {latest['fans']:+d}")
         if run:
             label=tr('Galibiyet serisi','Winning run') if run>0 else tr('Mağlubiyet serisi','Losing run')
             line(support,f'{label} · {abs(run)}')

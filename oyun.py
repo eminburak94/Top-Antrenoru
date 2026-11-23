@@ -32,7 +32,7 @@ def check_package(output):
     with TemporaryDirectory() as folder, patch.dict(os.environ,{
         'LOCALAPPDATA':folder, 'USERPROFILE':folder,
     }):
-        assert user_directory()==Path(folder)/'TopAntrenoru'/'v0.9.3'
+        assert user_directory()==Path(folder)/'TopAntrenoru'/'v0.9.4'
         path=user_directory()/'saves'/'probe.json'
         root=tk.Tk()
         try:

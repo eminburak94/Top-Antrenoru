@@ -53,8 +53,8 @@ TEXT = {
 TEXT.update({
  'individual': ('Bireysel antrenman','Individual training'),
  'monthly_title': ('Aylık gelişim','Monthly development'),
- 'training_explain': ('Kadroda Ctrl ile oyuncuları seç. Seçim yoksa ekran tüm kadroyu kapsar. Odak ve yoğunluk yükü değiştirir. Beceriler ayrı ayrı artmaz.',
-                      'Ctrl-select players in the squad. With no selection this screen covers the whole squad. Focus and intensity affect workload. Skills do not increase independently.'),
+ 'training_explain': ('Bu tabloda Ctrl ile oyuncu seç. Seçim yoksa plan listedeki tüm oyunculara uygulanır. Odak ve yoğunluk haftalık yükü değiştirir.',
+                      'Ctrl-select players in this table. With no selection the plan applies to every player listed. Focus and intensity affect weekly workload.'),
  'automatic': ('Özel planı olmayan oyuncuları otomatik yönet','Automatically manage players without an explicit plan'),
  'assign': ('Planı uygula','Apply plan'), 'back_squad': ('Kadroya dön','Back to squad'),
  'inherit': ('Takım programı / otomatik','Team plan / automatic'),

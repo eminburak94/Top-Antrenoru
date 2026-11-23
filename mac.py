@@ -344,7 +344,9 @@ class Match:
         self.pitch.partial_recovery=[0,0] if self.minute%5==0 else self.pitch.partial_recovery
         if self.minute==90 and self.human is not None:
             self.analysis['flow']=self.pitch.summary()
-            if self.team_orders is not None:self.analysis['advanced_regains']=self.pitch.advanced_regains[:]
+            if self.team_orders is not None:
+                self.analysis['advanced_regains']=self.pitch.advanced_regains[:]
+                self.analysis['zones']=[row[:] for row in self.pitch.zones]
 
     def step(self):
         if self.positional:return self.positional_step()

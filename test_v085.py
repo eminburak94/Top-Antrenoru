@@ -196,6 +196,10 @@ class Playthrough(unittest.TestCase):
 
     def test_c_desk_training_decision_and_weekly_review(self):
         self.ui.dashboard()
+        self.button(self.ui.body,'Antrenman').invoke()
+        self.assertTrue(any(w.cget('text')=='Haftalık antrenman planı'
+                            for w in widgets(self.ui.body,ttk.Label)))
+        self.ui.dashboard()
         picker=next(widgets(self.ui.body,ttk.Combobox))
         picker.current(1);picker.event_generate('<<ComboboxSelected>>');self.root.update()
         self.assertEqual(self.s['training'],'Rest')
