@@ -11,3 +11,18 @@ The tests for actual cross-version engine parity still use the optional older
 source directories next to the checkout or its local yedek_v directories.
 A missing directory gives an explicit skip. Invalid fixture content or failing
 assertions remain test errors.
+
+Set `TOP_ANTRENORU_TEST_ARCHIVE` to the absolute path of a local source
+archive to run all historical comparisons without moving the checkout.
+Place the version directories directly under that path:
+
+- `yedek_v0.5.5`, `yedek_v0.6.0`, `yedek_v0.7.0`, `yedek_v0.7.5`, `yedek_v0.7.7`,
+  `yedek_v0.7.8`, `yedek_v0.7.9`, `yedek_v0.7.9.1`, `yedek_v0.7.9.2`,
+  `yedek_v0.7.9.3`, `yedek_v0.8.0`
+- `top ant tester v0.8.1`, `top ant v0.8.3`, `top ant v0.8.4`,
+  `top ant v0.8.5`, `top ant v0.8.6`
+
+Historical tests need the game source and game JSON files. They create
+careers at runtime. If the archive path is set, a missing version fails
+the test. Keep personal saves, game executables and external databases out
+of the fixture directory.

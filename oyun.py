@@ -29,7 +29,9 @@ def check_package(output):
     def click(window, text):
         find(window,ttk.Button,lambda w:w.cget('text')==text).invoke()
 
-    with TemporaryDirectory() as folder, patch.dict(os.environ,{'LOCALAPPDATA':folder}):
+    with TemporaryDirectory() as folder, patch.dict(os.environ,{
+        'LOCALAPPDATA':folder, 'USERPROFILE':folder,
+    }):
         assert user_directory()==Path(folder)/'TopAntrenoru'/'v0.8.9'
         path=user_directory()/'saves'/'probe.json'
         root=tk.Tk()
