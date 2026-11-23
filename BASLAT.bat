@@ -1,5 +1,5 @@
 @echo off
-title Top Antrenoru v0.8.7
+title Top Antrenoru v0.8.8
 cd /d "%~dp0"
 where py >nul 2>&1
 if errorlevel 1 (

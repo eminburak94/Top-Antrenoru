@@ -1,4 +1,4 @@
-"""Tkinter entry point and bundled distribution check."""
+"""Tkinter entry point and executable distribution check."""
 import sys
 import tkinter as tk
 from pathlib import Path
@@ -6,39 +6,108 @@ from pathlib import Path
 
 def check_package(output):
     import json
+    import os
     from tempfile import TemporaryDirectory
-    from kariyer import LiveMatch,new
-    from kayit import load_game,save_game
-    from veritabani import TEAMS
-    from arayuz import UI
+    from tkinter import ttk
+    from unittest.mock import patch
 
-    root=tk.Tk()
-    try:
-        root.withdraw()
-        ui=UI(root)
-        state=new('GALATASARAY',seed=821,match_model=4)
-        ui.begin(state)
-        ui.market()
-        ui.staff_page('all')
-        ui.squad()
-        ui.tactics()
-        ui.set_piece_page().destroy()
-        match=LiveMatch(state)
-        match.capture=True
-        match.instruction('press',1)
-        match.finish()
-        assert match.frames and match.commit()
-        with TemporaryDirectory() as folder:
-            path=Path(folder)/'probe.json'
-            save_game(state,path)
-            restored=load_game(path)
-        result={'version':root.title(),'frozen':bool(getattr(sys,'frozen',False)),
-                'clubs':len(TEAMS),'economy_model':restored['economy_model'],
-                'search':True,'match_model':restored['match_model'],'frames':len(match.frames),'flow':match.pitch.summary(),
-                'week':restored['week'],'played':len(restored['results'][0])}
-        output.write_text(json.dumps(result,ensure_ascii=False),encoding='utf-8')
-    finally:
-        root.destroy()
+    from arayuz import UI
+    from kayit import decode, encode
+    from sozlesme import asking_terms
+    from transfer import asking_fee, deal
+    from veritabani import HISTORICAL, P, TEAMS, all_players, available, roster
+
+    def find(parent, kind, predicate=lambda _: True):
+        for widget in parent.winfo_children():
+            if isinstance(widget,kind) and predicate(widget):
+                return widget
+            nested=find(widget,kind,predicate)
+            if nested is not None:
+                return nested
+        return None
+
+    def click(window, text):
+        find(window,ttk.Button,lambda w:w.cget('text')==text).invoke()
+
+    with TemporaryDirectory() as folder, patch.dict(os.environ,{'LOCALAPPDATA':folder}):
+        path=Path(folder)/'probe.json'
+        root=tk.Tk()
+        try:
+            ui=UI(root)
+            click(root,'TR / EN')
+            find(root,ttk.Combobox).set('FENERBAHÇE')
+            click(root,'Start career')
+            s=ui.s
+            assert (s['club'],s['year'],s['match_model'])==('FENERBAHÇE',2000,4)
+            version=root.title()
+
+            ui.squad()
+            root.update()
+            assert len(find(ui.body,ttk.Treeview).get_children())==len(roster(s['club'],s['year'],s))
+            ui.tactics()
+            root.update()
+            shape=find(ui.body,ttk.Combobox,lambda w:'4-4-2' in w.cget('values'))
+            shape.set('4-3-3')
+            shape.event_generate('<<ComboboxSelected>>')
+            root.update()
+            assert s['formation']=='4-3-3'
+            ui.set_piece_page().destroy()
+
+            ui.market()
+            root.update()
+            market=find(ui.body,ttk.Treeview)
+            visible=set(market.get_children())
+            for player in all_players(s):
+                pid=player['id']
+                owner=s['owners'].get(pid)
+                if pid not in visible or owner==s['club'] or not owner and not available(s,player):
+                    continue
+                terms=asking_terms(s,player,s['club'],'Starter')
+                accepted,_=deal(decode(encode(s)),pid,s['club'],asking_fee(s,player),
+                                terms['years'],terms['wage'],terms['signing'],'Starter')
+                if accepted:
+                    break
+            else:
+                raise AssertionError('No valid offer candidate in the visible market')
+            market.selection_set(pid)
+            click(ui.body,'Make offer')
+            offer=find(root,tk.Toplevel)
+            with patch('arayuz.messagebox.showinfo',return_value='ok') as message:
+                click(offer,'Submit offer')
+            assert message.called and not offer.winfo_exists() and s['owners'][pid]==s['club']
+
+            ui.live()
+            popup=find(root,tk.Toplevel)
+            click(popup,'Step')
+            root.update()
+            canvas_items=len(find(popup,tk.Canvas).find_all())
+            assert canvas_items>=22
+            with patch('arayuz.messagebox.askyesno',return_value=True):
+                click(popup,'Finish match')
+            root.update()
+            assert not popup.winfo_exists()
+            assert (s['week'],len(s['results'][0]))==(2,9)
+            assert any(s['club'] in (r['home'],r['away']) for r in s['results'][0])
+            with patch('arayuz.filedialog.asksaveasfilename',return_value=str(path)):
+                ui.save()
+            assert path.is_file()
+            snapshot=encode(s)
+        finally:
+            root.destroy()
+
+        root=tk.Tk()
+        try:
+            ui=UI(root)
+            with patch('arayuz.filedialog.askopenfilename',return_value=str(path)):
+                click(root,'Kayıt yükle')
+            assert encode(ui.s)==snapshot
+            result=dict(version=version,frozen=bool(getattr(sys,'frozen',False)),
+                        clubs=len(TEAMS),players=len(P)+len(HISTORICAL),club=s['club'],
+                        match_model=s['match_model'],formation=s['formation'],transfer=pid,
+                        canvas_items=canvas_items,week=s['week'],played=len(s['results'][0]),reload=True)
+            output.write_text(json.dumps(result,ensure_ascii=False),encoding='utf-8')
+        finally:
+            root.destroy()
 
 
 def main():

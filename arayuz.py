@@ -36,9 +36,9 @@ from kayit import user_directory
 
 class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews):
  def __init__(self,r):
-  self.r=r;self.s=None;self.lang='TR';r.title('Top Antrenörü v0.8.7');r.geometry('1200x760');r.minsize(960,600);r.configure(bg=THEME['base'])
+  self.r=r;self.s=None;self.lang='TR';r.title('Top Antrenörü v0.8.8');r.geometry('1200x760');r.minsize(960,600);r.configure(bg=THEME['base'])
   install(r)
-  self.head=tk.Label(r,bg=THEME['base'],fg=THEME['accent'],font=(FONT,19,'bold'),pady=11);self.head.pack(fill='x');self.nav=ttk.Frame(r,padding=8);self.nav.pack(fill='x');self.body=ttk.Frame(r,padding=16);self.body.pack(fill='both',expand=True);self.status=tk.Label(r,bg=THEME['base'],fg=THEME['muted'],anchor='w',padx=16,pady=8,text='TOP ANTRENÖRÜ  |  2000–2001  |  v0.8.7');self.status.pack(side='bottom',fill='x');self.start()
+  self.head=tk.Label(r,bg=THEME['base'],fg=THEME['accent'],font=(FONT,19,'bold'),pady=11);self.head.pack(fill='x');self.nav=ttk.Frame(r,padding=8);self.nav.pack(fill='x');self.body=ttk.Frame(r,padding=16);self.body.pack(fill='both',expand=True);self.status=tk.Label(r,bg=THEME['base'],fg=THEME['muted'],anchor='w',padx=16,pady=8,text='TOP ANTRENÖRÜ  |  2000–2001  |  v0.8.8');self.status.pack(side='bottom',fill='x');self.start()
  def tr(self,a,b):return a if self.lang=='TR' else b
  def management_text(self,key,**values):
   return self.tr(*TEXT[key]).format(**values)
@@ -1262,7 +1262,7 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews):
     messagebox.showerror('Top Antrenörü',self.tr('Kayıt yazılamadı.','Save could not be written.'))
  def load(self):
   folder=user_directory()/'saves'
-  previous=[user_directory().parent/version/'saves' for version in ('v0.8.6','v0.8.5','v0.8.4','v0.8.3')]
+  previous=[user_directory().parent/version/'saves' for version in ('v0.8.7','v0.8.6','v0.8.5','v0.8.4','v0.8.3')]
   legacy=Path.home()/'TopAntrenoru'/'saves'
   initial=next((item for item in (folder,*previous,legacy) if item.is_dir()),Path.home())
   path=filedialog.askopenfilename(filetypes=[('JSON','*.json')],initialdir=initial)
