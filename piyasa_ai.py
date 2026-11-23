@@ -5,7 +5,7 @@ from ekonomi import projection,can_commit
 from mevkiler import fit_level,LAYOUTS,group_for
 from oyuncu import ability,age_at,state
 from sozlesme import asking_terms,player_accepts,renew
-from transfer import add_offer,asking_fee,deal,selling_ready
+from transfer import add_offer,asking_fee,deal,loan_deal,loan_fee,loan_ready,performance,selling_ready
 from veritabani import TEAMS,all_players,available,roster
 
 
@@ -28,7 +28,12 @@ def assess(s, team, squad):
         alternatives=[p for p in squad if fit_level(p,role)>=2]
         options=sorted(alternatives,key=lambda p:(-skill(s,p,role),p['id']))
         slots=FORMATION.count(role)
-        shortage=max(0,slots-len(options))
+        if s.get('transfer_model'):
+            options.sort(key=lambda p:(state(s,p)['injury']>=3,-skill(s,p,role),p['id']))
+            available_count=sum(state(s,p)['injury']<3 for p in options)
+        else:
+            available_count=len(options)
+        shortage=max(0,slots-available_count)
         thin=max(0,DEPTH[group]-depth[group])
         core=options[:slots]
         aging=sum(known_age(s,p,0)>=32 for p in core)
@@ -52,6 +57,7 @@ def contract_cost_penalty(fee, terms, plan, budget):
 
 
 def recruit(s):
+    modern=s.get('transfer_model')
     market=[]
     recently_signed={pid for year,event,pid,team in s['contract_events']
                      if year==s['year'] and event=='signed'}
@@ -79,7 +85,7 @@ def recruit(s):
         if owner is None and not available(s,p):continue
         age=age_at(p,s['year'],s['week'])
         if not isinstance(age,int) or not 15<=age<38:continue
-        market.append((p,age))
+        market.append((p,age,performance(s,p['id']) if modern else 0))
     for team in TEAMS:
         if s['employed'] and team==s['club']:continue
         squad=roster(team,s['year'],s)
@@ -88,6 +94,8 @@ def recruit(s):
         if plan['closing']<plan['reserve']:continue
         initial=assess(s,team,squad)
         paid=0
+        borrowed=False
+        elite=s['club_reputation'][team]>=67
         for _,role,baseline,shortage,aging in initial:
             squad=roster(team,s['year'],s)
             if len(squad)>=24:break
@@ -98,7 +106,7 @@ def recruit(s):
             budget=min(ledger['cash'],ledger['transfer_budget'],plan['closing']-plan['reserve'])
             if budget<=0:break
             options=[]
-            for p,age in market:
+            for p,age,form in market:
                 pid=p['id']
                 owner=s['owners'].get(pid)
                 fit=fit_level(p,role)
@@ -125,6 +133,9 @@ def recruit(s):
                     score-=contract_cost_penalty(fee,terms,plan,budget)
                 else:
                     score-=cost/max(80000,budget)*2.8+terms['wage']/max(1000,plan['wage_room'])*5
+                if modern:
+                    score+=form*(.62 if elite else .35)
+                    score+=quality*.14 if elite else upside*.42-cost/max(80000,budget)*.9
                 options.append((score,pid,p,owner,fee,terms))
             for _,pid,p,owner,fee,terms in sorted(options,reverse=True):
                 if s['employed'] and owner==s['club']:
@@ -137,6 +148,35 @@ def recruit(s):
                         paid+=1
                     plan=projection(s,team)
                     break
+            else:
+                if modern and shortage and not borrowed:
+                    borrowed=borrow_cover(s,team,role,market,plan)
+                    if borrowed:plan=projection(s,team)
+
+
+def borrow_cover(s,team,role,market,plan):
+    options=[]
+    for p,age,form in market:
+        pid=p['id']
+        owner=s['owners'].get(pid)
+        if not owner or owner==team or age>26 or fit_level(p,role)<2 or state(s,p)['injury']>=3:
+            continue
+        if s['employed'] and owner==s['club'] and s['sale_status'].get(pid)!='loan':
+            continue
+        if not loan_ready(s,p):
+            continue
+        fee=loan_fee(s,p)
+        wage=state(s,p)['wage']
+        if can_commit(s,team,fee,wage//2,forecast=plan):
+            options.append((skill(s,p,role)+.4*form,pid,p,owner,fee,wage))
+    for _,pid,p,owner,fee,wage in sorted(options,reverse=True):
+        if s['employed'] and owner==s['club']:
+            ok=add_offer(s,p,team,fee,dict(years=1,wage=min(50000,max(100,wage)),
+                                         signing=0,role='Starter',kind='loan',share=50))
+        else:
+            ok=loan_deal(s,pid,team,fee,50)[0]
+        if ok:return True
+    return False
 
 
 def renew_contracts(s,team,squad):

@@ -20,7 +20,8 @@ import is_piyasasi
 
 SCHEMA_VERSION = 3
 
-def new(club, manager="Menajer", seed=None, unemployed=False, models=True, economy_version=2, match_model=0):
+def new(club, manager="Menajer", seed=None, unemployed=False, models=True, economy_version=2, match_model=0,
+        transfer_model=False):
     if club not in TEAMS:
         raise ValueError('Unknown club')
     s = dict(club=club, manager=manager, year=2000, history=[], week=1,
@@ -28,6 +29,7 @@ def new(club, manager="Menajer", seed=None, unemployed=False, models=True, econo
              style='Balanced', cap=99, lang='TR', rng_state=random.Random(seed).getstate(),
              schema_version=SCHEMA_VERSION, attribute_profile=3, position_model=1, lineup_model=1, career_id=uuid4().hex)
     if match_model:s.update(match_model=match_model,match_mode='2d')
+    if transfer_model:s['transfer_model']=1
     prepare(s)
     personel.setup(s)
     if models:
@@ -75,6 +77,8 @@ def rollover(s):
         'finance': copy.deepcopy(s['finance']),
         'squads': {team: len(roster(team,s['year'],s)) for team in TEAMS},
     })
+    from transfer import return_loans
+    return_loans(s)
     abilities = ability_snapshot(s)
     age_world(s,rng)
     s['season_development'] = dict(year=s['year'],club=s['club'],changes={
@@ -96,6 +100,8 @@ def rollover(s):
     return True
 
 def prepare_week(s, observations=None):
+    from finans import pay_due_transfers,wage_shares
+    pay_due_transfers(s)
     if s.get('economy_model') and s['week'] in (5,9,13,17,21,25,29,33):
         personel.refill(s)
     if s['week'] == 18 or (s['year'] == 2000 and s['week'] == 1):
@@ -109,7 +115,9 @@ def prepare_week(s, observations=None):
         observation = prepare_player(s,p,team,conditioning.get(team,0),programme)
         if observation and observations is not None:
             observations[pid] = observation
-        wages(s, team, state(s, p)['wage'])
+        borrower,parent=wage_shares(s,pid,state(s,p)['wage'])
+        wages(s,team,borrower)
+        if parent:wages(s,s['loans'][pid]['parent'],parent)
     rng = random_for(s)
     fixtures = [m for m in s['schedule'] if m['week'] == s['week']]
     return [(fixture, rng.getrandbits(64), rng.getrandbits(64)) for fixture in fixtures], rng.getstate()

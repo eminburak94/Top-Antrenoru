@@ -1,5 +1,5 @@
 """Conservative cash forecasts for the v1 economy, in internal currency."""
-from finans import capacity,cycle,payroll,operating_plan
+from finans import capacity,commitments,cycle,payroll,operating_plan
 from donem import scaled
 
 
@@ -33,7 +33,7 @@ def projection(s,team):
         facilities=fixed['academy']+fixed['maintenance']
         reserve=scaled(s,'operations',reserve)
     operating=staff+wages+admin(s,team)+facilities+interest
-    closing=ledger['cash']+income-operating*weeks
+    closing=ledger['cash']+income-operating*weeks-commitments(s,team)[0]
     # Annualized recurring sustainability, excluding prize money or player sales.
     annual=int(34*recurring+17*gate+(season if s.get('economy_model')==2 else seats*(4.2+rep*.085)*scale))
     # Forecast a modest committed debt-service buffer without deducting it from the ledger.
@@ -44,7 +44,7 @@ def projection(s,team):
                 closing=closing-debt_buffer, debt_buffer=debt_buffer, wage_room=wage_room, weeks=weeks)
 
 
-def can_commit(s,team,fee,wage_change,staff_change=0,forecast=None):
+def can_commit(s,team,fee,wage_change,staff_change=0,forecast=None,cash_due=None):
     plan=projection(s,team) if forecast is None else forecast
     ledger=s['finance'][team]
     added=wage_change+staff_change
@@ -52,7 +52,7 @@ def can_commit(s,team,fee,wage_change,staff_change=0,forecast=None):
         return True
     if wage_change+plan['wages']+staff_change>plan['wage_room']:
         return False
-    return (ledger['cash']-fee>=min(plan['reserve'],25000)
+    return (ledger['cash']-(fee if cash_due is None else cash_due)>=min(plan['reserve'],25000)
             and plan['closing']-fee-added*plan['weeks']>=plan['reserve'])
 
 

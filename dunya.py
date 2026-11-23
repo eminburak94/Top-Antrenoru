@@ -85,6 +85,11 @@ def season_open(s,rng):
     s['board_targets']=targets(s)
 
 def recruit(s):
+    if s.get('transfer_withdrawals'):
+        start=18 if s['week']>=18 else 1
+        remaining={pid:row for pid,row in s['transfer_withdrawals'].items() if row[:2]==[s['year'],start]}
+        if remaining:s['transfer_withdrawals']=remaining
+        else:s.pop('transfer_withdrawals')
     if s.get('economy_model'):
         from ekonomi import crisis_sales
         crisis_sales(s)

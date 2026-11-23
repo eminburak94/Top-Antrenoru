@@ -199,4 +199,6 @@ TEXT.update({
  'financial_limit': ('Bütçe baskısı · Nakit rezervi veya maaş kapasitesi yetersiz.','Budget pressure · Cash reserve or wage headroom is insufficient.'),
  'financial_plan': ('Sezon sonu nakit tahmini {closing} · Hedef rezerv {reserve}', 'Projected season-end cash {closing} · Target reserve {reserve}'),
  'opening_review': ('{team} · {formation} · K/S/O/H {strengths} · Kondisyon {fitness} · Uygunsuz mevki {mismatches}', '{team} · {formation} · GK/D/M/F {strengths} · Fitness {fitness} · Position mismatches {mismatches}'),
+ 'pathway': ('Oyuncu bu kadroda uzun süre rotasyonda kalmak istemiyor.',
+             'The player will not commit long-term to a rotation role in this squad.'),
 })

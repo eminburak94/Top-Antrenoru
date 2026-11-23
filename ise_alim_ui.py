@@ -128,6 +128,9 @@ class RecruitmentViews:
         search.table.bind('<<TreeviewSelect>>',selection_summary)
         self.search_buttons(search,prefs,'players',players.get,self.profile)
         search.button(tr('Teklif ver','Make offer'),lambda:self.negotiate(players[search.selection()]) if search.selection() else None)
+        if s.get('transfer_model'):
+            search.button(tr('Kiralama teklifi','Loan offer'),
+                          lambda:self.offer_loan(players[search.selection()]) if search.selection() else None)
         def scout():
             uid=search.selection()
             if uid:

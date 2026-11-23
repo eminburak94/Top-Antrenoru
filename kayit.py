@@ -477,10 +477,37 @@ def validate_world(s):
                 and integer(offer['week'],1,34) and offer['status'] in ('open','expired','accepted','rejected')
                 and integer(offer['wage'],100,50000) and integer(offer['years'],1,5)
                 and integer(offer['signing'],0,2000000) and offer['role'] in ('Starter','Rotation'),'Invalid offer')
+        if 'kind' in offer:
+            require(s.get('transfer_model')==1 and offer['kind']=='loan' and offer.get('share') in (25,50,75,100),
+                    'Invalid loan offer')
+    require(integer(s.get('transfer_model',0),0,1),'Invalid transfer model')
+    if s.get('transfer_model'):
+        loans=s.get('loans',{})
+        require(isinstance(loans,dict),'Invalid loans')
+        for pid,row in loans.items():
+            require(pid in P and pid in s['fitness'] and isinstance(row,dict) and row.get('parent') in TEAMS
+                    and row.get('borrower') in TEAMS and row['parent']!=row['borrower']
+                    and s['owners'].get(pid)==row['borrower'] and type(row.get('share')) is int
+                    and row['share'] in (25,50,75,100),'Invalid loan')
+        payments=s.get('transfer_payments',[])
+        require(isinstance(payments,list),'Invalid transfer payments')
+        for row in payments:
+            require(isinstance(row,list) and len(row)==5 and row[0]==s['year'] and integer(row[1],s['week'],34)
+                    and row[2] in TEAMS and row[3] in TEAMS and row[2]!=row[3] and integer(row[4],1),
+                    'Invalid transfer payment')
+        withdrawals=s.get('transfer_withdrawals',{})
+        require(isinstance(withdrawals,dict),'Invalid transfer withdrawals')
+        for pid,row in withdrawals.items():
+            require(pid in P and isinstance(row,list) and len(row)==4 and row[0]==s['year'] and row[1] in (1,18)
+                    and row[2] in TEAMS and row[3] in TEAMS and row[2]!=row[3],'Invalid transfer withdrawal')
+    else:
+        require(not any(key in s for key in ('loans','transfer_payments','transfer_withdrawals')),
+                'Missing transfer model')
     require(all(isinstance(row,list) and len(row)==3 and row[2] in TEAMS for row in s['jobs']),'Invalid job history')
     require(isinstance(s['world_history'],list) and isinstance(s['contract_events'],list),'Invalid world history')
     for pid,mode in s['sale_status'].items():
-        require(pid in P and mode in ('listed','blocked'),'Invalid sale status')
+        modes=('listed','blocked','loan') if s.get('transfer_model') else ('listed','blocked')
+        require(pid in P and mode in modes,'Invalid sale status')
     for stats in [s['season_stats'],*(h.get('player_stats',{}) for h in s['history'])]:
         require(isinstance(stats,dict),'Invalid player statistics')
         for pid,clubs in stats.items():
@@ -545,7 +572,7 @@ def load_game(path):
 
 def user_directory():
     local=os.environ.get('LOCALAPPDATA')
-    return (Path(local) if local else Path.home()) / 'TopAntrenoru' / 'v0.9.0'
+    return (Path(local) if local else Path.home()) / 'TopAntrenoru' / 'v0.9.1'
 
 
 def autosave(s, directory=None):

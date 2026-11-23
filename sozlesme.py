@@ -1,6 +1,7 @@
 """Contract terms, player preferences and renewals."""
 from donem import multiplier,scaled
 from finans import book_deal, can_pay
+from mevkiler import fit_level
 from oyuncu import ability, age_at, state
 from veritabani import P, roster, unregister, player, all_players
 
@@ -48,6 +49,19 @@ def player_objection(s, p, team, years, wage, signing, role):
             demand*=.96
         if owner and s['board_targets'][team]+4<=s['board_targets'][owner]:
             demand*=.97
+    if s.get('transfer_model'):
+        rivals=sum(fit_level(q,p['pos'])>=2 and ability(s,q)>ability(s,p)+.5
+                   for q in roster(team,s['year'],s) if q['id']!=p['id'] and not state(s,q)['injury'])
+        young=isinstance(age,int) and age<=23
+        if role=='Starter' and rivals<2:
+            demand*=.93 if young else .97
+        elif role=='Rotation' and (young and state(s,p)['potential']>ability(s,p)+2 or played>=1800):
+            demand*=1.12
+        if young and years>=3 and role=='Rotation' and rivals>=2:
+            return 'pathway'
+        if owner!=team:
+            prestige=s['club_reputation'][team]-rival
+            demand*=1-min(.08,max(0,prestige)*.004)
     if wage + min(signing / 52, demand * limit) < demand:
         return 'compensation'
     return None
@@ -59,7 +73,7 @@ def renew(s, pid, years, wage, signing, role='Rotation', club=None):
     if club is None and not s['employed']:
         return False, 'unavailable'
     club = s['club'] if club is None else club
-    if s['owners'].get(pid) != club:
+    if s['owners'].get(pid) != club or pid in s.get('loans',{}):
         return False, 'unavailable'
     p = player(s,pid)
     if not player_accepts(s,p,club,years,wage,signing,role):

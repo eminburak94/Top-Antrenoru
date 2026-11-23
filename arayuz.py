@@ -6,12 +6,13 @@ from tkinter import ttk, messagebox, filedialog, simpledialog
 from pathlib import Path
 from kariyer import new, prepare, advance, rollover, career, LiveMatch, lineup
 from veritabani import P, TEAMS, available, roster, player, all_players, verified_results
-from finans import payroll
+from finans import commitments,payroll
 from para import CURRENCIES,rate as money_rate,text as money_text,edit_value,from_display
 from menajer import accept_job, resign
 from sozlesme import asking_terms, renew, contract_time, player_objection
 from oyuncu import ability, age_at, attributes, state, GROUPS
-from transfer import asking_fee, deal, answer_offer, reject_all, set_sale_status, selling_ready, value
+from transfer import (asking_fee, deal, answer_offer, loan_deal, loan_fee, loan_ready,
+                      purchase_offer, reject_all, set_sale_status, selling_ready, value)
 from yarisma import window, FORMATIONS, STYLES, TRANSFER_PERIODS, opening_date
 from mac import eligible, fits, formation_roles, manual_slots, select_slots, match_positions, suitable
 from istatistik import SHOT_EVENTS, combine
@@ -37,9 +38,9 @@ from kayit import user_directory
 
 class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews):
  def __init__(self,r):
-  self.r=r;self.s=None;self.lang='TR';r.title('Top Antrenörü v0.9.0 Playtest Beta');r.geometry('1200x760');r.minsize(960,600);r.configure(bg=THEME['base'])
+  self.r=r;self.s=None;self.lang='TR';r.title('Top Antrenörü v0.9.1 Playtest Beta');r.geometry('1200x760');r.minsize(960,600);r.configure(bg=THEME['base'])
   install(r)
-  self.head=tk.Label(r,bg=THEME['base'],fg=THEME['accent'],font=(FONT,19,'bold'),pady=11);self.head.pack(fill='x');self.nav=ttk.Frame(r,padding=8);self.nav.pack(fill='x');self.body=ttk.Frame(r,padding=16);self.body.pack(fill='both',expand=True);self.status=tk.Label(r,bg=THEME['base'],fg=THEME['muted'],anchor='w',padx=16,pady=8,text='TOP ANTRENÖRÜ  |  2000–2001  |  v0.9.0 Playtest Beta');self.status.pack(side='bottom',fill='x');self.start()
+  self.head=tk.Label(r,bg=THEME['base'],fg=THEME['accent'],font=(FONT,19,'bold'),pady=11);self.head.pack(fill='x');self.nav=ttk.Frame(r,padding=8);self.nav.pack(fill='x');self.body=ttk.Frame(r,padding=16);self.body.pack(fill='both',expand=True);self.status=tk.Label(r,bg=THEME['base'],fg=THEME['muted'],anchor='w',padx=16,pady=8,text='TOP ANTRENÖRÜ  |  2000–2001  |  v0.9.1 Playtest Beta');self.status.pack(side='bottom',fill='x');self.start()
  def tr(self,a,b):return a if self.lang=='TR' else b
  def management_text(self,key,**values):
   return self.tr(*TEXT[key]).format(**values)
@@ -47,7 +48,7 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews):
   for x in self.body.winfo_children():x.destroy()
  def button(self,parent,a,b,cmd):return ttk.Button(parent,text=self.tr(a,b),command=cmd)
  def start(self):
-  self.clear();self.head.config(text='TOP ANTRENÖRÜ  /  2000');v=tk.StringVar(value='GALATASARAY');name=tk.StringVar();unemployed=tk.BooleanVar();outer=ttk.Frame(self.body);outer.pack(expand=True,fill='both');left=tk.Frame(outer,bg=THEME['hero'],padx=32,pady=30);left.pack(side='left',fill='both',expand=True,padx=(0,16));tk.Label(left,text='2000 / 01',font=(FONT,36,'bold'),bg=THEME['hero'],fg=THEME['accent']).pack(anchor='w');tk.Label(left,text=self.tr('Futbolun geçmişine dön.\nKendi tarihini yaz.','Return to football history.\nWrite your own.'),justify='left',font=(FONT,19),bg=THEME['hero'],fg=THEME['text']).pack(anchor='w',pady=20);c=tk.Canvas(left,width=330,height=210,bg=THEME['field'],highlightthickness=0);c.pack(anchor='w',fill='x');c.create_rectangle(12,12,318,198,outline=THEME['line'],width=2);c.create_line(165,12,165,198,fill=THEME['line'],width=2);c.create_oval(130,70,200,140,outline=THEME['line'],width=2);c.create_rectangle(12,55,65,155,outline=THEME['line']);c.create_rectangle(265,55,318,155,outline=THEME['line']);right=ttk.Frame(outer,padding=24);right.pack(side='right',fill='y');ttk.Label(right,text=self.tr('Yeni kariyer','New career'),font=(FONT,21,'bold')).pack(anchor='w',pady=(20,22));ttk.Label(right,text=self.tr('Menajer adı','Manager name')).pack(anchor='w');e=ttk.Entry(right,textvariable=name,width=34);e.pack(fill='x',pady=(5,18));ttk.Label(right,text=self.tr('Kulübünü seç','Choose your club')).pack(anchor='w');ttk.Combobox(right,textvariable=v,values=TEAMS,state='readonly',width=32).pack(fill='x',pady=(5,22));ttk.Checkbutton(right,text=self.management_text('start_unemployed'),variable=unemployed).pack(anchor='w');defstart=lambda:self.begin(dict(new(v.get(),name.get().strip() or self.tr('Menajer','Manager'),unemployed=unemployed.get(),match_model=4),lang=self.lang));ttk.Button(right,text=self.tr('Kariyeri başlat','Start career'),style='Accent.TButton',command=defstart).pack(fill='x',pady=5);self.button(right,'Kayıt yükle','Load career',self.load).pack(fill='x',pady=5);links=ttk.Frame(right);links.pack(fill='x',pady=5);ttk.Button(links,text='TR / EN',command=lambda:(self.toggle(),self.start())).pack(side='left');self.button(links,'Emeği Geçenler','Credits',self.credits).pack(side='left',padx=(6,0));e.bind('<Return>',lambda _:defstart());e.focus_set()
+  self.clear();self.head.config(text='TOP ANTRENÖRÜ  /  2000');v=tk.StringVar(value='GALATASARAY');name=tk.StringVar();unemployed=tk.BooleanVar();outer=ttk.Frame(self.body);outer.pack(expand=True,fill='both');left=tk.Frame(outer,bg=THEME['hero'],padx=32,pady=30);left.pack(side='left',fill='both',expand=True,padx=(0,16));tk.Label(left,text='2000 / 01',font=(FONT,36,'bold'),bg=THEME['hero'],fg=THEME['accent']).pack(anchor='w');tk.Label(left,text=self.tr('Futbolun geçmişine dön.\nKendi tarihini yaz.','Return to football history.\nWrite your own.'),justify='left',font=(FONT,19),bg=THEME['hero'],fg=THEME['text']).pack(anchor='w',pady=20);c=tk.Canvas(left,width=330,height=210,bg=THEME['field'],highlightthickness=0);c.pack(anchor='w',fill='x');c.create_rectangle(12,12,318,198,outline=THEME['line'],width=2);c.create_line(165,12,165,198,fill=THEME['line'],width=2);c.create_oval(130,70,200,140,outline=THEME['line'],width=2);c.create_rectangle(12,55,65,155,outline=THEME['line']);c.create_rectangle(265,55,318,155,outline=THEME['line']);right=ttk.Frame(outer,padding=24);right.pack(side='right',fill='y');ttk.Label(right,text=self.tr('Yeni kariyer','New career'),font=(FONT,21,'bold')).pack(anchor='w',pady=(20,22));ttk.Label(right,text=self.tr('Menajer adı','Manager name')).pack(anchor='w');e=ttk.Entry(right,textvariable=name,width=34);e.pack(fill='x',pady=(5,18));ttk.Label(right,text=self.tr('Kulübünü seç','Choose your club')).pack(anchor='w');ttk.Combobox(right,textvariable=v,values=TEAMS,state='readonly',width=32).pack(fill='x',pady=(5,22));ttk.Checkbutton(right,text=self.management_text('start_unemployed'),variable=unemployed).pack(anchor='w');defstart=lambda:self.begin(dict(new(v.get(),name.get().strip() or self.tr('Menajer','Manager'),unemployed=unemployed.get(),match_model=4,transfer_model=True),lang=self.lang));ttk.Button(right,text=self.tr('Kariyeri başlat','Start career'),style='Accent.TButton',command=defstart).pack(fill='x',pady=5);self.button(right,'Kayıt yükle','Load career',self.load).pack(fill='x',pady=5);links=ttk.Frame(right);links.pack(fill='x',pady=5);ttk.Button(links,text='TR / EN',command=lambda:(self.toggle(),self.start())).pack(side='left');self.button(links,'Emeği Geçenler','Credits',self.credits).pack(side='left',padx=(6,0));e.bind('<Return>',lambda _:defstart());e.focus_set()
  def credits(self):
   self.clear()
   title=self.tr('Emeği Geçenler','Credits')
@@ -77,7 +78,8 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews):
    ('Maç','Match',[('Maç hazırlığı','Match preparation',self.preparation),('Son maç','Last match',self.last_report),
                    ('Maç ayarı','Match mode',self.match_settings)]),
    ('Transfer','Recruitment',[('Futbolcu arama','Player search',self.market),
-                              ('Gelen teklifler','Incoming offers',self.offers_page),('Finans','Finance',self.finance_page)]),
+                              ('Gelen teklifler','Incoming offers',self.offers_page),('Finans','Finance',self.finance_page)]
+                             +([('Kiralamalar','Loans',self.loans_page)] if self.s.get('transfer_model') else [])),
    ('Dünya','World',[('Lig','Table',self.table),('Fikstür','Fixtures',self.fixtures),('Arşiv','History',self.archive),
                     ('Oyuncu istatistikleri','Player statistics',self.scorers)]),
    ('Kariyer','Career',[('Menajer geçmişi','Career record',self.career_page),('İş piyasası','Job market',self.jobs_page),
@@ -170,8 +172,11 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews):
  def news_page(self):
   self.clear()
   self.button(self.body,'Menajer masası','Manager desk',self.dashboard).pack(anchor='w')
+  loan_types={'Kiralama / Loan':self.tr('Kiralama','Loan'),
+              'Kiralama bitti / Loan ended':self.tr('Kiralama bitti','Loan ended')}
   self.tree([self.tr('Hafta','Week'),self.tr('Haber','News'),self.tr('Ayrıntı','Details')],
-            [(week,kind,self.money_news(message)) for week,kind,message in reversed(self.s['news'][-50:])],wide=True)
+            [(week,loan_types.get(kind,kind),self.money_news(message))
+             for week,kind,message in reversed(self.s['news'][-50:])],wide=True)
 
  def inbox_page(self):
   self.clear()
@@ -512,20 +517,26 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews):
    if selected:
     z=state(s,ps[int(selected[0])])
     status={'listed':self.tr('Satılık','Listed'),'blocked':self.tr('Satışa kapalı','Not for sale')}
+    status['loan']=self.tr('Kiralanabilir','Available for loan')
     p=ps[int(selected[0])]
-    summary.config(text=f"{self.contract_label(p)} · {money_text(s,z['wage'])} · {status.get(s['sale_status'].get(p['id']),'—')}")
+    loan=s.get('loans',{}).get(p['id'])
+    label=self.tr('Kiralık','On loan') if loan else status.get(s['sale_status'].get(p['id']),'—')
+    summary.config(text=f"{self.contract_label(p)} · {money_text(s,z['wage'])} · {label}")
   t.bind('<<TreeviewSelect>>',selected_contract)
   self.button(contract_bar,'Sözleşme yenile','Renew contract',contract).pack(side='right')
   def sale(mode):
    if t.selection() and set_sale_status(s,ps[int(t.selection()[0])]['id'],mode):
     selected_contract(None);self.autosave()
-  for a,b,mode in [('Satılık','List','listed'),('Satışa kapat','Block sale','blocked'),('Sıfırla','Reset','normal')]:
+  modes=[('Satılık','List','listed'),('Satışa kapat','Block sale','blocked'),('Sıfırla','Reset','normal')]
+  if s.get('transfer_model'):modes.append(('Kiralık listesi','List for loan','loan'))
+  for a,b,mode in modes:
    self.button(contract_bar,a,b,lambda mode=mode:sale(mode)).pack(side='right',padx=2)
  def reason(self,reason):
   messages={
    'player':('Oyuncu koşulları reddetti. Maaşı, imza parasını veya rolü değiştirin.','Player rejected the terms. Adjust wages, signing bonus or role.'),
    'seller':('Satıcı kulüp bu bedeli kabul etmedi veya kadrosu yetersiz.','The selling club rejected the fee or its squad is too small.'),
    'buyer':('Alıcı karşı teklifi reddetti.','The buying club rejected the counteroffer.'),
+   'withdrawn':('Kulüp bu transfer döneminde görüşmeden çekildi.','The club has withdrawn for this transfer window.'),
    'budget':('Nakit, transfer veya haftalık maaş bütçesi ya da kadro sınırı yetersiz.','Insufficient cash, transfer or weekly wage budget, or squad space.'),
    'fee':('Geçersiz bonservis bedeli.','Invalid transfer fee.'),
    'unavailable':('İşlem şu anda yapılamıyor.','The deal is currently unavailable.'),
@@ -533,7 +544,7 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews):
   return self.tr(*messages.get(reason,messages['unavailable']))
  def negotiate(self,p,renewal=False):
   s=self.s
-  if not s['employed'] or (not renewal and not window(s)):
+  if not s['employed'] or p['id'] in s.get('loans',{}) or (not renewal and not window(s)):
    messagebox.showinfo('Top Antrenörü',self.reason('unavailable'));return
   tr=self.tr;club=s['club'];z=state(s,p)
   terms=asking_terms(s,p,club,'Starter')
@@ -552,16 +563,36 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews):
    ttk.Label(f,text=label if key=='years' else f'{label} ({money_rate(s)[1]})').grid(row=row,column=0,sticky='w',pady=4)
    entries[key]=tk.StringVar(value=str(default) if key=='years' else edit_value(s,default))
    ttk.Entry(f,textvariable=entries[key]).grid(row=row,column=1,pady=4)
+  installments=None
+  bargain=bool(s.get('transfer_model') and owner and not renewal)
+  if bargain:
+   ttk.Label(f,text=tr('Ödeme','Payment')).grid(row=5,column=0,sticky='w')
+   installments=ttk.Combobox(f,state='readonly',values=(tr('Peşin','Upfront'),tr('3 taksit','3 installments')))
+   installments.current(0);installments.grid(row=5,column=1)
+  rounds=0
   roles=(tr('İlk 11','Starter'),tr('Rotasyon','Rotation'))
   role=ttk.Combobox(f,values=roles,state='readonly')
   role.current(0);role.grid(row=6,column=1)
   ttk.Label(f,text=tr('Beklenen rol','Expected role')).grid(row=6,column=0,sticky='w')
   feedback=ttk.Label(f,wraplength=370);feedback.grid(row=8,column=0,columnspan=2)
   def submit():
+   nonlocal rounds
    try: amounts={key:int(var.get()) if key=='years' else from_display(s,var.get()) for key,var in entries.items()}
    except ValueError: feedback.config(text=tr('Tutarları sayı olarak girin.','Enter numeric terms.'));return
    amounts['role']='Starter' if role.current()==0 else 'Rotation'
-   ok,reason=renew(s,p['id'],**amounts) if renewal else deal(s,p['id'],club,**amounts)
+   if bargain:
+    ok,reason,quote=purchase_offer(s,p['id'],club,**amounts,
+                                  payments=3 if installments.current()==1 else 1,rounds=rounds)
+    if reason=='counter':
+     rounds+=1
+     entries['fee'].set(edit_value(s,quote))
+     feedback.config(text=tr('Satıcının karşı teklifi','Seller counteroffer')+' · '+money_text(s,quote))
+     return
+    if reason=='withdrawn':
+     feedback.config(text=self.reason(reason));submit_button.state(['disabled']);self.autosave()
+     return
+   else:
+    ok,reason=renew(s,p['id'],**amounts) if renewal else deal(s,p['id'],club,**amounts)
    if ok:
     if s.get('match_model'):
      messagebox.showinfo(tr('Teklif kabul edildi','Offer accepted'),
@@ -594,6 +625,13 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews):
      fee_cost=money_text(s,fee+signing),transfer=money_text(s,ledger['transfer_budget']),
      cash=money_text(s,ledger['cash']),after=money_text(s,wage_after),
      wage_limit=money_text(s,ledger['wage_budget'])))
+   if installments is not None and installments.current()==1 and fee>=3:
+    deferred=fee//3
+    schedule_text=tr('Bugün {first}; {w1}. ve {w2}. haftalarda {later}. Toplam tutar bütçeden ayrılır.',
+                     'Today {first}; {later} in weeks {w1} and {w2}. The full amount is reserved.')
+    details.configure(text=details.cget('text')+'\n'+schedule_text.format(
+      first=money_text(s,fee-2*deferred+signing),later=money_text(s,deferred),
+      w1=s['week']+4,w2=s['week']+8))
    if s.get('match_model'):
     try:years=int(entries['years'].get())
     except ValueError:return
@@ -604,20 +642,63 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews):
     details.configure(text=details.cget('text')+'\n'+assessment)
   for field in entries.values():field.trace_add('write',preview)
   role.bind('<<ComboboxSelected>>',preview)
+  if installments is not None:installments.bind('<<ComboboxSelected>>',preview)
   preview()
-  self.button(f,'Teklifi ilet','Submit offer',submit).grid(row=7,column=1,pady=8)
+  submit_button=self.button(f,'Teklifi ilet','Submit offer',submit)
+  submit_button.grid(row=7,column=1,pady=8)
+ def offer_loan(self,p):
+  s=self.s;tr=self.tr;club=s['club'];pid=p['id']
+  if not s['employed'] or not window(s) or s['owners'].get(pid)==club or not loan_ready(s,p):
+   messagebox.showinfo('Top Antrenörü',tr('Oyuncu kiralamaya uygun değil.','Player is unavailable for loan.'),parent=self.r)
+   return
+  w=tk.Toplevel(self.r);w.title(tr('Kiralama teklifi','Loan offer'));w.transient(self.r);w.grab_set()
+  ttk.Label(w,text=f"{p['name']} · "+tr('Sezon sonuna kadar','Until season end')).pack(padx=14,pady=8)
+  ttk.Label(w,text=tr('Kiralama bedeli','Loan fee')+f' ({money_rate(s)[1]})').pack()
+  fee=ttk.Entry(w);fee.insert(0,edit_value(s,loan_fee(s,p)));fee.pack(padx=14,pady=4)
+  ttk.Label(w,text=tr('Ödeyeceğin maaş payı','Your wage share')).pack()
+  share=ttk.Combobox(w,state='readonly',values=('25%','50%','75%','100%'))
+  share.current(1);share.pack(padx=14,pady=4)
+  weekly=ttk.Label(w);weekly.pack(padx=14,pady=4)
+  def refresh(_event=None):
+   wage=state(s,p)['wage']*(share.current()+1)//4
+   weekly.config(text=tr('Haftalık gider','Weekly cost')+' · '+money_text(s,wage))
+  share.bind('<<ComboboxSelected>>',refresh);refresh()
+  feedback=ttk.Label(w,wraplength=430);feedback.pack()
+  def submit():
+   try:amount=from_display(s,fee.get())
+   except ValueError:feedback.config(text=self.reason('fee'));return
+   ok,reason=loan_deal(s,pid,club,amount,25*(share.current()+1))
+   if ok:
+    w.destroy();self.autosave();self.loans_page()
+   else:feedback.config(text=self.reason(reason))
+  self.button(w,'Kiralama teklifini ilet','Submit loan offer',submit).pack(pady=8)
+ def loans_page(self):
+  self.clear();s=self.s;tr=self.tr;club=s['club']
+  self.button(self.body,'Transfer merkezi','Transfer centre',self.market).pack(anchor='w')
+  rows=[]
+  for pid,loan in s.get('loans',{}).items():
+   if club not in (loan['borrower'],loan['parent']):continue
+   p=player(s,pid);wage=state(s,p)['wage'];borrower=wage*loan['share']//100
+   rows.append((p['name'],loan['parent'],loan['borrower'],f"{loan['share']}%",
+                money_text(s,borrower if club==loan['borrower'] else wage-borrower),s['year']+1))
+  if not rows:ttk.Label(self.body,text=tr('Aktif kiralama yok.','No active loans.')).pack(anchor='w')
+  self.tree([tr('Oyuncu','Player'),tr('Asıl kulüp','Parent club'),tr('Kiralayan','Borrower'),
+             tr('Kiralayan maaş payı','Borrower wage share'),tr('Haftalık kulüp gideri','Weekly club cost'),
+             tr('Dönüş sezonu','Return season')],rows,wide=True)
  def offers_page(self):
   s=self.s;tr=self.tr;self.clear()
   ttk.Label(self.body,text=tr('Gelen transfer teklifleri','Incoming transfer offers')).pack(anchor='w')
   entries=[(i,o) for i,o in enumerate(s['offers']) if o['seller']==s['club'] and o['status']=='open'
-           and o['year']==s['year'] and 0<=s['week']-o['week']<=2 and s['owners'].get(o['pid'])==s['club']]
+           and window(s) and o['year']==s['year'] and 0<=s['week']-o['week']<=2 and s['owners'].get(o['pid'])==s['club']]
   msg=self.management_text
   table=self.tree([msg(key) for key in ('player','buyer','fee','offer_wage','years','signing','role','status')],
                   [(player(s,o['pid'])['name'],o['buyer'],money_text(s,o['fee']),
-                    money_text(s,o['wage']),o['years'],money_text(s,o['signing']),
-                    msg(o['role']),msg('open')) for _,o in entries],wide=True)
+                    money_text(s,o['wage']*o['share']//100 if o.get('kind')=='loan' else o['wage']),
+                    tr('Sezon sonu','Season end') if o.get('kind')=='loan' else o['years'],money_text(s,o['signing']),
+                    tr('Kiralama','Loan')+f" · {o['share']}%" if o.get('kind')=='loan' else msg(o['role']),
+                    msg('open')) for _,o in entries],wide=True)
   for column,key in ((2,'fee'),(3,'wage'),(5,'signing')):
-   values=[o[key] for _,o in entries]
+   values=[o['wage']*o['share']//100 if key=='wage' and o.get('kind')=='loan' else o[key] for _,o in entries]
    table.heading(column,command=lambda c=column,v=values:self.sort_tree(table,c,v))
   detail=ttk.Label(self.body,text=msg('compare_help' if entries else 'no_offers'),wraplength=880)
   detail.pack(anchor='w')
@@ -645,8 +726,8 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews):
      except ValueError:messagebox.showinfo('Top Antrenörü',self.reason('fee'));return
    if choice=='counter' and amount is None:return
    ok,reason=answer_offer(s,index,choice,amount)
-   if ok:self.offers_page();self.autosave()
-   else:messagebox.showinfo('Top Antrenörü',self.reason(reason))
+   if ok or reason=='withdrawn':self.offers_page();self.autosave()
+   if not ok:messagebox.showinfo('Top Antrenörü',self.reason(reason))
   bar=ttk.Frame(self.body);bar.pack()
   def decline_all():
    if reject_all(s):
@@ -880,6 +961,16 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews):
    self.button(self.body,'Sezon geçmişi','Season history',lambda:self.finance_history(history)).pack(anchor='w')
   ttk.Label(self.body,text=self.tr('Transfer bütçesi','Transfer budget')+' '+money_text(s,row['transfer_budget'])
    +' · '+self.tr('Haftalık maaş bütçesi','Weekly wage budget')+' '+money_text(s,row['wage_budget'])).pack(anchor='w')
+  if s.get('transfer_model'):
+   outgoing,incoming=commitments(s,s['club'])
+   ttk.Label(self.body,text=tr('Ödenecek / alınacak taksitler','Installments payable / receivable')
+    +' · '+money_text(s,outgoing)+' / '+money_text(s,incoming)).pack(anchor='w')
+   due=Counter()
+   for _,week,buyer,_,amount in s.get('transfer_payments',[]):
+    if buyer==s['club']:due[week]+=amount
+   if due:
+    week=min(due)
+    ttk.Label(self.body,text=tr('Sonraki ödeme','Next payment')+f' · {week} · '+money_text(s,due[week])).pack(anchor='w')
   if s.get('economy_model'):
    plan=projection(s,s['club'])
    ttk.Label(self.body,text=self.management_text('financial_plan',
@@ -1373,7 +1464,7 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews):
     messagebox.showerror('Top Antrenörü',self.tr('Kayıt yazılamadı.','Save could not be written.'))
  def load(self):
   folder=user_directory()/'saves'
-  previous=[user_directory().parent/version/'saves' for version in ('v0.8.9','v0.8.8','v0.8.7','v0.8.6','v0.8.5','v0.8.4','v0.8.3')]
+  previous=[user_directory().parent/version/'saves' for version in ('v0.9.0','v0.8.9','v0.8.8','v0.8.7','v0.8.6','v0.8.5','v0.8.4','v0.8.3')]
   legacy=Path.home()/'TopAntrenoru'/'saves'
   initial=next((item for item in (folder,*previous,legacy) if item.is_dir()),Path.home())
   path=filedialog.askopenfilename(filetypes=[('JSON','*.json')],initialdir=initial)

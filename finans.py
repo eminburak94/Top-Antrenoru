@@ -75,7 +75,24 @@ def settle_transfer(s, buyer, seller, fee):
 def payroll(s, team):
     from oyuncu import state
     from veritabani import roster
-    return sum(state(s,p)['wage'] for p in roster(team, s['year'], s))
+    loans=s.get('loans',{})
+    total=sum(wage_shares(s,p['id'],state(s,p)['wage'])[0] for p in roster(team,s['year'],s))
+    return total+sum(wage_shares(s,pid,s['fitness'][pid]['wage'])[1]
+                     for pid,loan in loans.items() if loan['parent']==team)
+
+
+def wage_shares(s,pid,wage):
+    loan=s.get('loans',{}).get(pid)
+    borrower=wage*loan['share']//100 if loan else wage
+    return borrower,wage-borrower
+
+
+def commitments(s,team):
+    outgoing=incoming=0
+    for _,_,buyer,seller,amount in s.get('transfer_payments',[]):
+        if buyer==team:outgoing+=amount
+        if seller==team:incoming+=amount
+    return outgoing,incoming
 
 def budget_defaults(s, team):
     ledger = s['finance'][team]
@@ -96,26 +113,55 @@ def allocate(s):
             from ekonomi import constrain_budget
             constrain_budget(s,team)
 
-def can_pay(s, team, fee, signing, wage, previous_wage=0):
+def can_pay(s, team, fee, signing, wage, previous_wage=0, payments=1):
     ledger = s['finance'][team]
-    if not (fee+signing<=min(ledger['transfer_budget'],ledger['cash'])
+    reserved,_=commitments(s,team)
+    upfront=fee-2*(fee//3) if payments==3 else fee
+    if not (fee+signing<=ledger['transfer_budget'] and upfront+signing<=ledger['cash']-reserved
             and payroll(s,team)+wage-previous_wage<=ledger['wage_budget']):
         return False
+    if payments==3:
+        from ekonomi import can_commit
+        return can_commit(s,team,fee+signing,wage-previous_wage,cash_due=upfront+signing+reserved)
     if s.get('economy_model') and not (team==s['club'] and s['employed']):
         from ekonomi import can_commit
         return can_commit(s,team,fee+signing,wage-previous_wage)
     return True
 
-def book_deal(s, buyer, seller, fee, signing):
-    settle_transfer(s, buyer, seller, fee)
+def record_fee(s,buyer,seller,paid):
+    settle_transfer(s,buyer,seller,paid)
+    s['finance'][buyer]['fees_paid']+=paid
+    if seller:
+        s['finance'][seller]['transfer_budget']+=int(paid*.75)
+        s['finance'][seller]['fees_received']+=paid
+
+
+def book_deal(s, buyer, seller, fee, signing, payments=1):
+    if payments==3:
+        deferred=fee//3
+        record_fee(s,buyer,seller,fee-2*deferred)
+        for delay in (4,8):
+            s.setdefault('transfer_payments',[]).append([s['year'],s['week']+delay,buyer,seller,deferred])
+    else:
+        record_fee(s,buyer,seller,fee)
     ledger = s['finance'][buyer]
     ledger['cash'] -= signing
     ledger['transfer_budget'] -= fee + signing
-    ledger['fees_paid'] += fee
     ledger['signing_paid'] += signing
-    if seller:
-        s['finance'][seller]['transfer_budget'] += int(fee * .75)
-        s['finance'][seller]['fees_received'] += fee
+
+
+def pay_due_transfers(s):
+    rows=s.get('transfer_payments')
+    if not rows:
+        return
+    future=[]
+    for year,week,buyer,seller,amount in rows:
+        if (year,week)<=(s['year'],s['week']):
+            record_fee(s,buyer,seller,amount)
+        else:
+            future.append([year,week,buyer,seller,amount])
+    if future:s['transfer_payments']=future
+    else:s.pop('transfer_payments')
 
 def operating(s,team):
     ledger=s['finance'][team]
