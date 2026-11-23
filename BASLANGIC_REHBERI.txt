@@ -1,0 +1,19 @@
+TOP ANTRENÖRÜ v0.9.6 — ALİ BETA
+
+1. ZIP dosyasına sağ tıkla, “Tümünü ayıkla” seçeneğini kullan.
+2. Açılan klasörde “Top Antrenoru.exe” dosyasına çift tıkla.
+   EXE ile yanındaki _internal klasörünü birlikte tut.
+   Python kurulumu veya terminal gerekmez.
+3. Menajer adını yaz, kulübünü seç ve “Kariyeri başlat”a bas.
+4. Temmuz takviminde rakip seçip “Rakibi planla”ya bas.
+   “Hazırlık haftasını ilerlet” ile maça veya sonraki haftaya geç.
+5. Maç merkezinde “Başlat”, “Adım” ve “Maçı bitir” seçenekleri var.
+   Pres, tempo ve taktik planı aynı pencerede. Dört hazırlık haftası
+   tamamlandığında “Devam” ile 2000–01 lig sezonuna başlarsın.
+6. Antrenman tablosundan son üç haftanın yükünü incele.
+   Transfer ve personel işlemleri ilgili menülerden yapılır.
+7. Kariyer menüsünden kaydet ve daha sonra “Kayıt yükle”yi kullan.
+   Varsayılan konum %LOCALAPPDATA%\TopAntrenoru\v0.9.6\saves.
+
+Varsayılan dil Türkçe. Ana menüdeki TR / EN düğmesi İngilizceyi açar.
+Bir sorun görürsen kulüp, sezon, hafta ve son yaptığın işlemi not et.

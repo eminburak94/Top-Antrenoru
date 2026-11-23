@@ -1,0 +1,6 @@
+Top Antrenörü v0.9.6 — Ali Beta
+Platform: Windows x64
+Kariyer başlangıcı: Temmuz 2000 / 2000–01
+Diller: Türkçe, İngilizce
+Kaynak: eminburak94/Top-Antrenoru
+Dal: develop/v096-ali-beta

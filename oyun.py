@@ -32,7 +32,7 @@ def check_package(output):
     with TemporaryDirectory() as folder, patch.dict(os.environ,{
         'LOCALAPPDATA':folder, 'USERPROFILE':folder,
     }):
-        assert user_directory()==Path(folder)/'TopAntrenoru'/'v0.9.5'
+        assert user_directory()==Path(folder)/'TopAntrenoru'/'v0.9.6'
         path=user_directory()/'saves'/'probe.json'
         root=tk.Tk()
         try:
@@ -60,6 +60,16 @@ def check_package(output):
             for _ in range(3):
                 click(ui.body,'Advance preparation week')
             s['match_mode']='2d'
+            ui.training_page()
+            assert find(ui.body,ttk.Treeview).get_children()
+            find(ui.body,ttk.Combobox,lambda w:'Tactical' in w.cget('values')).set('Tactical')
+            click(ui.body,'Apply plan')
+            assert s['individual_training'] and all(plan[0]=='tactical'
+                                                    for plan in s['individual_training'].values())
+            ui.staff_page()
+            assert find(ui.body,ttk.Treeview).get_children()
+            ui.club_life_page()
+            assert find(ui.body,ttk.Notebook).tabs()
 
             ui.squad()
             root.update()
@@ -125,6 +135,7 @@ def check_package(output):
                         clubs=len(TEAMS),players=len(P)+len(HISTORICAL),club=s['club'],
                         match_model=s['match_model'],formation=s['formation'],transfer=pid,
                         canvas_items=canvas_items,week=s['week'],played=len(s['results'][0]),reload=True,
+                        friendlies=len(s['preseason']['results']), training=True, staff=True, club_desk=True,
                         credits=True,save_directory=user_directory().name)
             output.write_text(json.dumps(result,ensure_ascii=False),encoding='utf-8')
         finally:

@@ -1,0 +1,9 @@
+TOP ANTRENÖRÜ v0.9.6 — BİLİNEN SINIRLAR
+
+Windows x64 hedeflenir. EXE kod imzası taşımıyor. Windows sürümüne ve
+kurumsal güvenlik kurallarına göre ilk açılış uyarısı görülebilir.
+
+Hazırlık takvimi 2000 yazına ve mevcut lig takımlarına açık.
+Oyuncu yükü son üç haftayı kapsıyor. Tıbbi dakika önerisi yok.
+Uzun kariyerde kullanılan 20 sezonluk hızlı kontrol eski maç modelini
+kullanır. Model 4 için doğrulanan sezon sayısı geliştirme raporundadır.
