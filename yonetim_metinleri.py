@@ -37,10 +37,18 @@ TEXT = {
  'no_offers': ('Karşılaştırılabilecek açık teklif yok.','No open offers to compare.'),
  'incoming_preview': ('Tahmini değer {value} · Mevcut maaş {current} · Nakit girişi {fee} · Transfer bütçesine {income}',
                       'Estimated value {value} · Current wage {current} · Cash proceeds {fee} · Transfer budget credit {income}'),
- 'offer_preview': ('Hazırlanıyor · Tahmini değer {value}. Asgari bonservis {ask}. Başlangıç oyuncu talebi {wage}/hafta, {years} sezon, imza {signing}.\n'
-                   'Peşin maliyet {fee_cost} · Transfer bütçesi {transfer} · Nakit {cash}. Öneri sonrası haftalık maaş {after} / {wage_limit}.',
-                   'Draft · Estimated value {value}. Minimum fee {ask}. Indicative player terms {wage}/week, {years} seasons, signing {signing}.\n'
-                   'Up-front cost {fee_cost} · Transfer budget {transfer} · Cash {cash}. Proposed weekly payroll {after} / {wage_limit}.'),
+ 'offer_preview': ('Tahmini değer {value} · İstenen bonservis {ask} · Oyuncu talebi {wage}/hafta, {years} sezon, imza {signing}.\n'
+                   'Bugün {upfront} · Kalan transfer bütçesi {budget_left} · Kalan kullanılabilir nakit {cash_left}.\n'
+                   'Haftalık maaş toplamı {wages} · Kalan maaş payı {wage_left}.',
+                   'Estimated value {value} · Asking fee {ask} · Player request {wage}/week, {years} seasons, signing {signing}.\n'
+                   'Due today {upfront} · Transfer budget left {budget_left} · Available cash left {cash_left}.\n'
+                   'Weekly payroll {wages} · Wage budget left {wage_left}.'),
+ 'quote_transfer': ('transfer bütçesi','transfer budget'),
+ 'quote_cash': ('kullanılabilir nakit','available cash'),
+ 'quote_wages': ('maaş bütçesi','wage budget'),
+ 'quote_forecast': ('sezon sonu mali tahmini','season-end forecast'),
+ 'quote_blocked': ('Mali kontrolü geçemiyor · {issues}','Budget check failed · {issues}'),
+ 'quote_clear': ('Mali kontrol uygun.','Budget check passed.'),
  'invalid_amount': ('Geçerli bir tutar gir.','Enter a valid amount.'),
  'terms': ('Süre, maaş, imza parası veya rol geçerli aralıkta değil.','Length, wage, signing bonus or role is outside the accepted terms.'),
  'length': ('Oyuncu yaş nedeniyle iki sezondan uzun sözleşmeyi reddetti.','The player declined a contract longer than two seasons due to age.'),

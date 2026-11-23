@@ -8,7 +8,7 @@ from kariyer import new, prepare, advance, rollover, career, LiveMatch, lineup
 import hazirlik
 import oyuncu_yuku as workload
 from veritabani import P, TEAMS, available, roster, player, all_players, verified_results
-from finans import commitments,payroll
+from finans import commitments,payroll,transfer_quote
 from para import CURRENCIES,rate as money_rate,text as money_text,edit_value,from_display
 from menajer import accept_job, resign
 from sozlesme import asking_terms, renew, contract_time, player_objection
@@ -407,7 +407,7 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews,ClubLifeViews):
   for n,k in enumerate(sorted(t.get_children(),key=key,reverse=rev)):t.move(k,'',n)
  def external_profile(self,p):
   s=self.s;tr=self.tr
-  w=tk.Toplevel(self.r);w.title(p['name']);w.geometry('560x360')
+  w=tk.Toplevel(self.r);w.title(p['name']);w.geometry('560x435')
   panel=ttk.Frame(w,padding=18);panel.pack(fill='both',expand=True)
   ttk.Label(panel,text=p['name'],style='Title.TLabel',wraplength=490).pack(anchor='w')
   team=s['owners'].get(p['id'],tr('Serbest','Free'))
@@ -424,7 +424,21 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews,ClubLifeViews):
                      ('physical',tr('Fiziksel','Physical'))):
     lo,hi=report['groups'][key]
     ttk.Label(panel,text=f'{label} · {lo}–{hi}').pack(anchor='w')
+  if report:
+   ttk.Label(panel,text=self.scouting_age(report)).pack(anchor='w',pady=4)
   if s['employed'] and s['owners'].get(p['id'])!=s['club']:
+   if s.get('staff_system'):
+    update=ttk.Label(panel,wraplength=490);update.pack(anchor='w',pady=4)
+    def refresh_scout():
+     status,note=self.scouting_status(p['id'])
+     update.configure(text=note)
+     button.state(['!disabled'] if status=='ready' else ['disabled'])
+    def ask_scout():
+     self.request_scout(p['id'])
+     refresh_scout()
+    button=self.button(panel,'Gözlem iste','Request scouting',ask_scout)
+    button.pack(anchor='w')
+    refresh_scout()
    self.button(panel,'Teklif ver','Make offer',lambda:self.negotiate(p)).pack(anchor='w')
   return w
  def profile(self,p):
@@ -732,21 +746,27 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews,ClubLifeViews):
    except ValueError:
     details.configure(text=msg('invalid_amount'));return
    estimate=asking_terms(s,p,club,'Starter' if role.current()==0 else 'Rotation')
-   ledger=s['finance'][club]
-   wage_after=payroll(s,club)+wage-(z['wage'] if renewal else 0)
+   if min(fee,wage,signing)<0:
+    details.configure(text=msg('invalid_amount'));return
+   split=installments is not None and installments.current()==1
+   if split and fee<3:
+    details.configure(text=self.reason('fee'));return
+   quote=transfer_quote(s,club,fee,signing,wage,z['wage'] if renewal else 0,
+                        payments=3 if split else 1)
    details.configure(text=msg('offer_preview',value=money_text(s,value(s,p)),
      ask=money_text(s,0 if renewal else asking_fee(s,p)),wage=money_text(s,estimate['wage']),
      years=estimate['years'],signing=money_text(s,estimate['signing']),
-     fee_cost=money_text(s,fee+signing),transfer=money_text(s,ledger['transfer_budget']),
-     cash=money_text(s,ledger['cash']),after=money_text(s,wage_after),
-     wage_limit=money_text(s,ledger['wage_budget'])))
-   if installments is not None and installments.current()==1 and fee>=3:
-    deferred=fee//3
-    schedule_text=tr('Bugün {first}; {w1}. ve {w2}. haftalarda {later}. Toplam tutar bütçeden ayrılır.',
-                     'Today {first}; {later} in weeks {w1} and {w2}. The full amount is reserved.')
+     upfront=money_text(s,quote['upfront']),budget_left=money_text(s,quote['budget_left']),
+     cash_left=money_text(s,quote['cash_left']),wages=money_text(s,quote['wages']),
+     wage_left=money_text(s,quote['wage_left'])))
+   if split:
+    schedule_text=tr('{w1}. ve {w2}. haftalarda {later}.',
+                     '{later} in weeks {w1} and {w2}.')
     details.configure(text=details.cget('text')+'\n'+schedule_text.format(
-      first=money_text(s,fee-2*deferred+signing),later=money_text(s,deferred),
+      later=money_text(s,quote['deferred']),
       w1=s['week']+4,w2=s['week']+8))
+   issues=', '.join(msg('quote_'+code) for code in quote['issues'])
+   details.configure(text=details.cget('text')+'\n'+(msg('quote_blocked',issues=issues) if issues else msg('quote_clear')))
    if s.get('match_model'):
     try:years=int(entries['years'].get())
     except ValueError:return

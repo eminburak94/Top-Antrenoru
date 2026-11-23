@@ -247,16 +247,30 @@ def candidates(s,role=None,max_age=None,club=None):
         yield p
 
 
-def start_scout(s,pid):
+def scout_assignment(s,pid):
     st=s.get('staff_system')
     team=s['club']
     p=player(s,pid)
-    if not st or not s['employed'] or not p or not eligible_target(s,p):return False
-    scout=st['delegation'].get(team,{}).get('scouting')
-    if scout is None:
-        scout=next((key for key,_ in active(s,team,'scout')),None)
-    if scout is None or any(j['scout']==scout or (j['club'],j['player'])==(team,pid) for j in st['jobs']):
-        return False
+    if not st or not s['employed'] or not p or not eligible_target(s,p):
+        return 'unavailable',None
+    for job in st['jobs']:
+        if (job['club'],job['player'])==(team,pid):
+            return 'pending',max(0,job['due']-week_key(s))
+    pool=active(s,team,'scout')
+    if not pool:return 'no_scout',None
+    busy={job['scout'] for job in st['jobs']}
+    primary=st['delegation'].get(team,{}).get('scouting')
+    free=[(uid,row) for uid,row in pool if uid not in busy]
+    if not free:return 'busy',None
+    uid,_=max(free,key=lambda item:(item[0]==primary,item[1]['skills']['judging']+item[1]['skills']['potential']))
+    return 'ready',uid
+
+
+def start_scout(s,pid):
+    status,scout=scout_assignment(s,pid)
+    if status!='ready':return False
+    st=s['staff_system']
+    team=s['club']
     st['jobs'].append(dict(scout=scout,club=team,player=pid,due=week_key(s)+2))
     return True
 

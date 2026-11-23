@@ -114,20 +114,32 @@ def allocate(s):
             from ekonomi import constrain_budget
             constrain_budget(s,team)
 
-def can_pay(s, team, fee, signing, wage, previous_wage=0, payments=1):
+def transfer_quote(s, team, fee, signing, wage, previous_wage=0, payments=1):
+    """Explain the same budget checks used by completed transfers."""
     ledger = s['finance'][team]
     reserved,_=commitments(s,team)
-    upfront=fee-2*(fee//3) if payments==3 else fee
-    if not (fee+signing<=ledger['transfer_budget'] and upfront+signing<=ledger['cash']-reserved
-            and payroll(s,team)+wage-previous_wage<=ledger['wage_budget']):
-        return False
-    if payments==3:
+    deferred=fee//3 if payments==3 else 0
+    total=fee+signing
+    upfront=total-2*deferred
+    after_wages=payroll(s,team)+wage-previous_wage
+    available_cash=ledger['cash']-reserved
+    budget_left=ledger['transfer_budget']-total
+    issues=[]
+    if budget_left<0:issues.append('transfer')
+    if upfront>available_cash:issues.append('cash')
+    if after_wages>ledger['wage_budget']:issues.append('wages')
+    if not issues and (payments==3 or s.get('economy_model') and not (team==s['club'] and s['employed'])):
         from ekonomi import can_commit
-        return can_commit(s,team,fee+signing,wage-previous_wage,cash_due=upfront+signing+reserved)
-    if s.get('economy_model') and not (team==s['club'] and s['employed']):
-        from ekonomi import can_commit
-        return can_commit(s,team,fee+signing,wage-previous_wage)
-    return True
+        due=upfront+reserved if payments==3 else None
+        if not can_commit(s,team,total,wage-previous_wage,cash_due=due):
+            issues.append('forecast')
+    return dict(upfront=upfront,deferred=deferred,reserved=reserved,
+                cash_left=available_cash-upfront,budget_left=budget_left,
+                wages=after_wages,wage_left=ledger['wage_budget']-after_wages,issues=issues)
+
+
+def can_pay(s, team, fee, signing, wage, previous_wage=0, payments=1):
+    return not transfer_quote(s,team,fee,signing,wage,previous_wage,payments)['issues']
 
 def record_fee(s,buyer,seller,paid):
     settle_transfer(s,buyer,seller,paid)

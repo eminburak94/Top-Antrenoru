@@ -124,10 +124,10 @@ class StaffViews:
                          f"{report['confidence']}/20",f"{report['year']} / {report['week']}"))
         def start():
             pid=next(iter(table.selection()),None)
-            if pid and personel.start_scout(s,pid):
-                self.autosave()
+            if pid and self.request_scout(pid):
                 self.scout_page()
             else:
-                messagebox.showinfo(msg('staff_scouting'),msg('scout_unavailable'),parent=self.r)
+                messagebox.showinfo(msg('staff_scouting'),
+                                    self.scouting_status(pid)[1] if pid else msg('scout_unavailable'),parent=self.r)
         self.button(actions,*self.staff_labels('scout_start'),start).pack(side='left')
         ttk.Label(actions,text=msg('scout_limit')).pack(side='left',padx=6)

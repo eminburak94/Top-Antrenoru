@@ -4,11 +4,13 @@ from tkinter import messagebox,ttk
 
 from arama_bilesenleri import Search,number
 import personel
+from mac import eligible
+from mevkiler import LAYOUTS,fit_level,label as detail_position
 from oyuncu import GROUPS,age_at
 from para import from_display,text as money
 from sozlesme import asking_terms
 from transfer import asking_fee
-from veritabani import TEAMS,all_players,available
+from veritabani import TEAMS,all_players,available,roster
 from yerellestirme import citizenship_ids,country_label,position_label
 
 
@@ -21,7 +23,37 @@ def shortlists(s):
     return s.setdefault('ui_preferences',{})
 
 
+def formation_coverage(s):
+    slots=LAYOUTS[s['formation']] if s.get('position_model') else ()
+    squad=roster(s['club'],s['year'],s)
+    return {pos:(slots.count(pos),sum(fit_level(p,pos)>=2 and eligible(s,p) for p in squad))
+            for pos in dict.fromkeys(slots)}
+
+
 class RecruitmentViews:
+    def scouting_age(self,report):
+        from personel import week_key
+        weeks=max(0,week_key(self.s)-(report['year']*34+report['week']+1))
+        return self.tr('Rapor {year}/{week} · {age} hafta önce · Güven {confidence}/20',
+                       'Report {year}/{week} · {age} weeks ago · Confidence {confidence}/20').format(
+                           **report,age=weeks)
+
+    def scouting_status(self,pid):
+        status,detail=personel.scout_assignment(self.s,pid)
+        labels=dict(
+            pending=self.tr('Gözlem sürüyor · kalan hafta {weeks}','Scouting underway · {weeks} weeks remaining'),
+            no_scout=self.tr('Kulüpte gözlemci yok.','The club has no scout.'),
+            busy=self.tr('Tüm gözlemciler görevde.','All scouts are on assignment.'),
+            ready=self.tr('Gözlemci uygun · rapor iki hafta içinde.','Scout available · report in two weeks.'),
+            unavailable=self.tr('Bu oyuncu için gözlem başlatılamıyor.','Scouting cannot start for this player.'))
+        return status,labels[status].format(weeks=detail)
+
+    def request_scout(self,pid):
+        if personel.start_scout(self.s,pid):
+            self.autosave()
+            return True
+        return False
+
     def search_buttons(self,search,items,key,lookup,open_profile):
         tr=self.tr
         def toggle(add):
@@ -60,6 +92,7 @@ class RecruitmentViews:
         codes=sorted({code for p in players.values() for code in citizenship_ids(p)})
         roles=sorted({p['pos'] for p in players.values()}|{code for p in players.values() for code in p.get('alternate_positions',())})
         modes=choices([(tr('Serbest','Free'),'free'),(tr('Sözleşmeli','Contracted'),'owned')])
+        coverage=formation_coverage(s)
         fields=[
           ('name',tr('Oyuncu adı','Player name'),None),('club',tr('Kulüp','Club'),choices((t,t) for t in TEAMS)),
           ('position',tr('Mevki','Position'),choices((position_label(c,self.lang),c) for c in roles)),
@@ -71,6 +104,9 @@ class RecruitmentViews:
           ('technical',tr('Teknik ≥*','Technical ≥*'),None),('mental',tr('Zihinsel ≥*','Mental ≥*'),None),
           ('physical',tr('Fiziksel ≥*','Physical ≥*'),None),
         ]
+        if coverage:
+            fields.insert(4,('formation_slot',tr('Diziliş mevkii','Formation position'),
+                              choices((detail_position(pos,self.lang),pos) for pos in coverage)))
         columns=[tr('Futbolcu','Player'),tr('Kulüp','Club'),tr('Mevki','Position'),tr('Yaş','Age'),
                  tr('Bedel','Fee'),tr('Maaş','Wage'),tr('Yetenek*','Ability*'),tr('Potansiyel*','Potential*')]
         ttk.Label(self.body,text=tr('* Gözlem raporu aralığı. Rapor yoksa aralık bilinmiyor.',
@@ -93,6 +129,7 @@ class RecruitmentViews:
                 if f['name'].casefold() not in p['name'].casefold():continue
                 positions={p['pos'],*p.get('alternate_positions',())}
                 if f['position'] and f['position'] not in positions and not (GROUPS.get(f['position'],set()) & positions):continue
+                if f.get('formation_slot') and fit_level(p,f['formation_slot'])<2:continue
                 if f['nation'] and f['nation'] not in citizenship_ids(p):continue
                 if uid not in cache:
                     cache[uid]=(age_at(p,s['year'],s['week']),asking_fee(s,p),asking_terms(s,p,s['club'],'Starter')['wage'])
@@ -117,15 +154,27 @@ class RecruitmentViews:
         summary.pack(side='bottom',anchor='w',pady=4)
         def selection_summary(_=None):
             uid=search.selection()
+            slot_control=search.variables.get('formation_slot')
+            slot=slot_control[1].get(slot_control[0].get()) if slot_control else None
+            line=''
+            if slot in coverage:
+                required,ready=coverage[slot]
+                line=tr('{pos} · Dizilişte {required}, kadroda hazır ve uyumlu {ready}',
+                        '{pos} · {required} in formation, {ready} eligible fits in squad').format(
+                            pos=detail_position(slot,self.lang),required=required,ready=ready)
             if not uid:
-                summary.configure(text=tr('Özet için futbolcu seçin.','Select a player for a summary.'))
+                summary.configure(text=line or tr('Özet için futbolcu seçin.','Select a player for a summary.'))
                 return
             p=players[uid]
             age,fee,_=cache[uid]
-            scouted=tr('Gözlem raporu var','Scouting report available') if uid in reports else tr('Gözlem bekliyor','Unscouted')
+            scouted=self.scouting_age(reports[uid]) if uid in reports else self.scouting_status(uid)[1]
             summary.configure(text=f"{p['name']} · {clubs.get(uid) or tr('Serbest','Free')} · "
-                f"{position_label(p['pos'],self.lang)} · {age} · {money(s,fee)} · {scouted}")
+                f"{position_label(p['pos'],self.lang)} · {age} · {money(s,fee)} · {scouted}"
+                +('\n'+line if line else ''))
         search.table.bind('<<TreeviewSelect>>',selection_summary)
+        if coverage:
+            search.variables['formation_slot'][0].trace_add('write',lambda *_:selection_summary())
+        selection_summary()
         self.search_buttons(search,prefs,'players',players.get,self.profile)
         search.button(tr('Teklif ver','Make offer'),lambda:self.negotiate(players[search.selection()]) if search.selection() else None)
         if s.get('transfer_model'):
@@ -134,9 +183,9 @@ class RecruitmentViews:
         def scout():
             uid=search.selection()
             if uid:
-                ok=personel.start_scout(s,uid)
-                messagebox.showinfo(tr('Gözlem','Scouting'),
-                                    tr('İstek gönderildi','Request sent') if ok else self.management_text('scout_unavailable'),parent=self.r)
+                self.request_scout(uid)
+                messagebox.showinfo(tr('Gözlem','Scouting'),self.scouting_status(uid)[1],parent=self.r)
+                selection_summary()
         search.button(tr('Gözlemle','Scout'),scout)
 
     def staff_page(self,mode='mine'):
