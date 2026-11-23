@@ -142,7 +142,11 @@ def book_deal(s, buyer, seller, fee, signing, payments=1):
         deferred=fee//3
         record_fee(s,buyer,seller,fee-2*deferred)
         for delay in (4,8):
-            s.setdefault('transfer_payments',[]).append([s['year'],s['week']+delay,buyer,seller,deferred])
+            due_year, due_week = s['year'], s['week'] + delay
+            while due_week > 34:
+                due_year += 1
+                due_week -= 34
+            s.setdefault('transfer_payments',[]).append([due_year,due_week,buyer,seller,deferred])
     else:
         record_fee(s,buyer,seller,fee)
     ledger = s['finance'][buyer]
