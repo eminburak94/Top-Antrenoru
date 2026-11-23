@@ -25,3 +25,7 @@ Kaynak oyun Windows'ta gerçek Tkinter ana penceresini açtı ve WM_CLOSE ile s�
 Hedefli kayıt ve arayüz koşusunda 10 test geçti. Son yerleşim düzeltmesi sonrası 7 Tkinter ve 2D testi de geçti. Son genel koşular Windows'ta --gui ile yürütüldü. Yerel kaynakta 147 test keşfedildi, 143 geçti, 4 koşullu uzun test atlandı. Yalnızca Git'te izlenen dosyalardan çıkarılan temiz kaynakta 147 test keşfedildi, 124 geçti, 0 hata çıktı. unittest 26 atlama kaydı bildirdi. Bu sayı, aynı testin dört ayrı sürüm alt senaryosunu ayrı sayar. Uzun kariyer bu turun konusu olmadığından son koşularda yeniden çalıştırılmadı.
 
 İlk yerleşim denemesinden sonra dar pencere senaryosu genişletildi. Test ayrıştırmasında yanlış teste taşınan --long kapısı da düzeltilerek ölçümler nihai kaynakla tekrarlandı. Son günlükler .build/v088-beta-final-clean.log ve .build/v088-beta-final-local.log.
+
+## GitHub'daki menajerlik güncellemesiyle son doğrulama
+
+İlk gönderimde uzak geliştirme dalı 39f8e27 ile ilerlemişti. Bu commit geliştirme dalına birleştirildi. Birleşik kaynakta 11 hedefli test geçti. --gui ile 153 test keşfedildi. Temiz Git kaynak arşivinde 130 geçti, 26 atlama kaydı ve 0 hata. Tam tarihsel klasörlere sahip yerel kaynakta 149 geçti, 4 uzun test atlandı ve 0 hata. Atlamalar arasında ayrı sayılan tarihsel alt senaryolar bulunur. Son günlükler .build/v088-beta-merged-clean.log ve .build/v088-beta-merged-local.log. Main aynı commit'te tutuldu.
