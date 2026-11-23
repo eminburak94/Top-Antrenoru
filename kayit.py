@@ -267,6 +267,28 @@ def validate(s):
     rng = s['rng_state']
     s['rng_state'] = (rng[0], tuple(rng[1]), rng[2])
     random.Random(0).setstate(s['rng_state'])
+    if 'preseason' in s:
+        from hazirlik import DAYS
+        prep = s['preseason']
+        require(isinstance(prep, dict) and prep['club'] in TEAMS
+                and integer(prep['round'], 0, DAYS), 'Invalid preparation calendar')
+        require(isinstance(prep['fixtures'], dict) and all(
+            key in map(str, range(DAYS)) and isinstance(row, list) and len(row) == 2
+            and row[0] in TEAMS and row[0] != prep['club'] and type(row[1]) is bool
+            for key, row in prep['fixtures'].items()), 'Invalid preparation fixtures')
+        require(isinstance(prep['results'], list) and len(prep['results']) <= prep['round'],
+                'Invalid preparation results')
+        played = []
+        for index, home, away, x, y in prep['results']:
+            require(integer(index, 0, prep['round'] - 1) and str(index) in prep['fixtures']
+                    and integer(x, 0, 100) and integer(y, 0, 100), 'Invalid friendly result')
+            opponent, at_home = prep['fixtures'][str(index)]
+            require((home, away) == ((prep['club'], opponent) if at_home else (opponent, prep['club'])),
+                    'Invalid friendly teams')
+            played.append(index)
+        require(played == sorted(set(played)) and isinstance(prep['cohesion'], dict)
+                and all(key in formations and integer(n, 1, DAYS) for key, n in prep['cohesion'].items())
+                and sum(prep['cohesion'].values()) == len(played), 'Invalid preparation cohesion')
     return s
 
 def validate_manager(s):
@@ -659,7 +681,7 @@ def load_game(path):
 
 def user_directory():
     local=os.environ.get('LOCALAPPDATA')
-    return (Path(local) if local else Path.home()) / 'TopAntrenoru' / 'v0.9.4'
+    return (Path(local) if local else Path.home()) / 'TopAntrenoru' / 'v0.9.5'
 
 
 def autosave(s, directory=None):

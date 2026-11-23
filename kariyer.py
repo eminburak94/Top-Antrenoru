@@ -21,7 +21,7 @@ import is_piyasasi
 SCHEMA_VERSION = 3
 
 def new(club, manager="Menajer", seed=None, unemployed=False, models=True, economy_version=2, match_model=0,
-        transfer_model=False,living_club=False,tactics_model=False):
+        transfer_model=False,living_club=False,tactics_model=False,preseason=False):
     if club not in TEAMS:
         raise ValueError('Unknown club')
     s = dict(club=club, manager=manager, year=2000, history=[], week=1,
@@ -45,6 +45,9 @@ def new(club, manager="Menajer", seed=None, unemployed=False, models=True, econo
             setup(s)
             s['board_targets']=targets(s)
         is_piyasasi.setup(s,unemployed)
+        if preseason and s['employed']:
+            from hazirlik import setup
+            setup(s)
     return s
 
 def prepare(s):
@@ -223,6 +226,15 @@ def complete_week(s, plans, rng_state, user_match=None, feedback_before=None, ob
 
 def advance(s, intervention=None):
     """Play a week in bulk. Optional callback schedules user-match interventions."""
+    from hazirlik import Friendly, active, rest
+    if active(s):
+        if str(s['preseason']['round']) not in s['preseason']['fixtures']:
+            return rest(s)
+        friendly = Friendly(s)
+        if intervention is not None:
+            intervention(friendly)
+        friendly.finish()
+        return friendly.commit()
     if s['week'] == 35:
         return rollover(s)
     if intervention is not None and s['employed']:

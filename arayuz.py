@@ -5,6 +5,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox, filedialog, simpledialog
 from pathlib import Path
 from kariyer import new, prepare, advance, rollover, career, LiveMatch, lineup
+import hazirlik
 from veritabani import P, TEAMS, available, roster, player, all_players, verified_results
 from finans import commitments,payroll
 from para import CURRENCIES,rate as money_rate,text as money_text,edit_value,from_display
@@ -40,9 +41,9 @@ from kayit import user_directory
 
 class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews,ClubLifeViews):
  def __init__(self,r):
-  self.r=r;self.s=None;self.lang='TR';r.title('Top Antrenörü v0.9.4 Playtest Beta');r.geometry('1200x760');r.minsize(960,600);r.configure(bg=THEME['base'])
+  self.r=r;self.s=None;self.lang='TR';r.title('Top Antrenörü v0.9.5 Playtest Beta');r.geometry('1200x760');r.minsize(960,600);r.configure(bg=THEME['base'])
   install(r)
-  self.head=tk.Label(r,bg=THEME['base'],fg=THEME['accent'],font=(FONT,19,'bold'),pady=11);self.head.pack(fill='x');self.nav=ttk.Frame(r,padding=8);self.nav.pack(fill='x');self.body=ttk.Frame(r,padding=16);self.body.pack(fill='both',expand=True);self.status=tk.Label(r,bg=THEME['base'],fg=THEME['muted'],anchor='w',padx=16,pady=8,text='TOP ANTRENÖRÜ  |  2000–2001  |  v0.9.4 Playtest Beta');self.status.pack(side='bottom',fill='x');self.start()
+  self.head=tk.Label(r,bg=THEME['base'],fg=THEME['accent'],font=(FONT,19,'bold'),pady=11);self.head.pack(fill='x');self.nav=ttk.Frame(r,padding=8);self.nav.pack(fill='x');self.body=ttk.Frame(r,padding=16);self.body.pack(fill='both',expand=True);self.status=tk.Label(r,bg=THEME['base'],fg=THEME['muted'],anchor='w',padx=16,pady=8,text='TOP ANTRENÖRÜ  |  2000–2001  |  v0.9.5 Playtest Beta');self.status.pack(side='bottom',fill='x');self.start()
  def tr(self,a,b):return a if self.lang=='TR' else b
  def management_text(self,key,**values):
   return self.tr(*TEXT[key]).format(**values)
@@ -50,7 +51,7 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews,ClubLifeViews):
   for x in self.body.winfo_children():x.destroy()
  def button(self,parent,a,b,cmd):return ttk.Button(parent,text=self.tr(a,b),command=cmd)
  def start(self):
-  self.clear();self.head.config(text='TOP ANTRENÖRÜ  /  2000');v=tk.StringVar(value='GALATASARAY');name=tk.StringVar();unemployed=tk.BooleanVar();outer=ttk.Frame(self.body);outer.pack(expand=True,fill='both');left=tk.Frame(outer,bg=THEME['hero'],padx=32,pady=30);left.pack(side='left',fill='both',expand=True,padx=(0,16));tk.Label(left,text='2000 / 01',font=(FONT,36,'bold'),bg=THEME['hero'],fg=THEME['accent']).pack(anchor='w');tk.Label(left,text=self.tr('Futbolun geçmişine dön.\nKendi tarihini yaz.','Return to football history.\nWrite your own.'),justify='left',font=(FONT,19),bg=THEME['hero'],fg=THEME['text']).pack(anchor='w',pady=20);c=tk.Canvas(left,width=330,height=210,bg=THEME['field'],highlightthickness=0);c.pack(anchor='w',fill='x');c.create_rectangle(12,12,318,198,outline=THEME['line'],width=2);c.create_line(165,12,165,198,fill=THEME['line'],width=2);c.create_oval(130,70,200,140,outline=THEME['line'],width=2);c.create_rectangle(12,55,65,155,outline=THEME['line']);c.create_rectangle(265,55,318,155,outline=THEME['line']);right=ttk.Frame(outer,padding=24);right.pack(side='right',fill='y');ttk.Label(right,text=self.tr('Yeni kariyer','New career'),font=(FONT,21,'bold')).pack(anchor='w',pady=(20,22));ttk.Label(right,text=self.tr('Menajer adı','Manager name')).pack(anchor='w');e=ttk.Entry(right,textvariable=name,width=34);e.pack(fill='x',pady=(5,18));ttk.Label(right,text=self.tr('Kulübünü seç','Choose your club')).pack(anchor='w');ttk.Combobox(right,textvariable=v,values=TEAMS,state='readonly',width=32).pack(fill='x',pady=(5,22));ttk.Checkbutton(right,text=self.management_text('start_unemployed'),variable=unemployed).pack(anchor='w');defstart=lambda:self.begin(dict(new(v.get(),name.get().strip() or self.tr('Menajer','Manager'),unemployed=unemployed.get(),match_model=4,transfer_model=True,living_club=True,tactics_model=True),lang=self.lang));ttk.Button(right,text=self.tr('Kariyeri başlat','Start career'),style='Accent.TButton',command=defstart).pack(fill='x',pady=5);self.button(right,'Kayıt yükle','Load career',self.load).pack(fill='x',pady=5);links=ttk.Frame(right);links.pack(fill='x',pady=5);ttk.Button(links,text='TR / EN',command=lambda:(self.toggle(),self.start())).pack(side='left');self.button(links,'Emeği Geçenler','Credits',self.credits).pack(side='left',padx=(6,0));e.bind('<Return>',lambda _:defstart());e.focus_set()
+  self.clear();self.head.config(text='TOP ANTRENÖRÜ  /  2000');v=tk.StringVar(value='GALATASARAY');name=tk.StringVar();unemployed=tk.BooleanVar();outer=ttk.Frame(self.body);outer.pack(expand=True,fill='both');left=tk.Frame(outer,bg=THEME['hero'],padx=32,pady=30);left.pack(side='left',fill='both',expand=True,padx=(0,16));tk.Label(left,text='2000 / 01',font=(FONT,36,'bold'),bg=THEME['hero'],fg=THEME['accent']).pack(anchor='w');tk.Label(left,text=self.tr('Futbolun geçmişine dön.\nKendi tarihini yaz.','Return to football history.\nWrite your own.'),justify='left',font=(FONT,19),bg=THEME['hero'],fg=THEME['text']).pack(anchor='w',pady=20);c=tk.Canvas(left,width=330,height=210,bg=THEME['field'],highlightthickness=0);c.pack(anchor='w',fill='x');c.create_rectangle(12,12,318,198,outline=THEME['line'],width=2);c.create_line(165,12,165,198,fill=THEME['line'],width=2);c.create_oval(130,70,200,140,outline=THEME['line'],width=2);c.create_rectangle(12,55,65,155,outline=THEME['line']);c.create_rectangle(265,55,318,155,outline=THEME['line']);right=ttk.Frame(outer,padding=24);right.pack(side='right',fill='y');ttk.Label(right,text=self.tr('Yeni kariyer','New career'),font=(FONT,21,'bold')).pack(anchor='w',pady=(20,22));ttk.Label(right,text=self.tr('Menajer adı','Manager name')).pack(anchor='w');e=ttk.Entry(right,textvariable=name,width=34);e.pack(fill='x',pady=(5,18));ttk.Label(right,text=self.tr('Kulübünü seç','Choose your club')).pack(anchor='w');ttk.Combobox(right,textvariable=v,values=TEAMS,state='readonly',width=32).pack(fill='x',pady=(5,22));ttk.Checkbutton(right,text=self.management_text('start_unemployed'),variable=unemployed).pack(anchor='w');defstart=lambda:self.begin(dict(new(v.get(),name.get().strip() or self.tr('Menajer','Manager'),unemployed=unemployed.get(),match_model=4,transfer_model=True,living_club=True,tactics_model=True,preseason=True),lang=self.lang));ttk.Button(right,text=self.tr('Kariyeri başlat','Start career'),style='Accent.TButton',command=defstart).pack(fill='x',pady=5);self.button(right,'Kayıt yükle','Load career',self.load).pack(fill='x',pady=5);links=ttk.Frame(right);links.pack(fill='x',pady=5);ttk.Button(links,text='TR / EN',command=lambda:(self.toggle(),self.start())).pack(side='left');self.button(links,'Emeği Geçenler','Credits',self.credits).pack(side='left',padx=(6,0));e.bind('<Return>',lambda _:defstart());e.focus_set()
  def credits(self):
   self.clear()
   title=self.tr('Emeği Geçenler','Credits')
@@ -91,10 +92,13 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews,ClubLifeViews):
   for a,b,entries in groups:
    MenuButton(self.nav,tr(a,b),[(tr(left,right),callback) for left,right,callback in entries])
   self.button(self.nav,'Gündem','Inbox',self.inbox_page)
+  if hazirlik.active(self.s):
+   self.button(self.nav,'Sezon öncesi','Preseason',self.preseason_page).pack(side='left')
   ttk.Button(self.nav,text=tr('Devam','Continue'),style='Accent.TButton',command=self.next)
   wrap_controls(self.nav)
   self.header()
  def dashboard(self):
+  if hazirlik.active(self.s):return self.preseason_page()
   if 'manager_state' in self.s and not self.s['employed']:return self.employment_page()
   from yarisma import standings
   self.clear();s=self.s;tr=self.tr;club=s['club']
@@ -224,6 +228,39 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews,ClubLifeViews):
     if kind=='contract':self.negotiate(player(s,subject),True)
     else:self.training_page([subject])
   self.button(bar,'Seçili olay','Open selected',action).pack(side='left')
+ def preseason_page(self):
+  self.clear()
+  s=self.s;tr=self.tr;prep=s['preseason'];current=prep['round']
+  ttk.Label(self.body,text=tr('Sezon öncesi · Temmuz 2000','Preseason · July 2000'),
+            style='Title.TLabel').pack(anchor='w')
+  scores={index:f'{home} {x}–{y} {away}' for index,home,away,x,y in prep['results']}
+  rows=[]
+  for index in range(hazirlik.DAYS):
+   fixture=prep['fixtures'].get(str(index))
+   if index in scores:description=scores[index]
+   elif fixture:description=f"{fixture[0]} · "+(tr('Ev sahibi','Home') if fixture[1] else tr('Deplasman','Away'))
+   else:description=tr('Hazırlık haftası','Preparation week')
+   rows.append((hazirlik.day(index).isoformat(),description))
+  self.tree([tr('Tarih','Date'),tr('Program','Schedule')],rows,wide=True)
+  controls=ttk.Frame(self.body);controls.pack(anchor='w',pady=8)
+  dates=ttk.Combobox(controls,state='readonly',values=[hazirlik.day(i).isoformat() for i in range(current,hazirlik.DAYS)],width=12)
+  opponents=ttk.Combobox(controls,state='readonly',values=[team for team in TEAMS if team!=s['club']],width=26)
+  home=tk.BooleanVar(value=True)
+  dates.grid(row=0,column=0);dates.current(0)
+  opponents.grid(row=0,column=1,padx=5)
+  ttk.Checkbutton(controls,text=tr('İç saha','Home'),variable=home).grid(row=0,column=2)
+  def load_booking(_=None):
+   rival,venue=prep['fixtures'].get(str(current+dates.current()),('',True))
+   opponents.set(rival);home.set(venue)
+  def book(cancel=False):
+   if hazirlik.book(s,current+dates.current(),None if cancel else opponents.get(),home.get()):
+    self.preseason_page()
+  dates.bind('<<ComboboxSelected>>',load_booking);load_booking()
+  self.button(controls,'Rakibi planla','Book opponent',book).grid(row=0,column=3,padx=5)
+  self.button(controls,'İptal et','Cancel fixture',lambda:book(True)).grid(row=0,column=4)
+  ttk.Label(self.body,text=tr('Hazırlık maçında en fazla altı değişiklik. Maçlar formu, kondisyonu ve kullanılan dizilişle uyumu etkiler. Lig puanı ve oyuncu istatistikleri ayrı kalır.',
+    'Make up to six substitutions in a friendly. Friendlies affect form, condition and familiarity with the formation. League points and player statistics remain separate.'),wraplength=780).pack(anchor='w')
+  self.button(self.body,'Hazırlık haftasını ilerlet','Advance preparation week',self.next).pack(anchor='w',pady=6)
  def preparation(self):
   self.clear()
   ttk.Label(self.body,text=self.tr('Maç hazırlığı','Match preparation'),style='Title.TLabel').pack(anchor='w')
@@ -1225,8 +1262,8 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews,ClubLifeViews):
    review=s.get('last_tactical_review')
    if review and (review['year'],review['week'],review['home'],review['away'])!=(s['year'],s['week']-1,match['home'],match['away']):review=None
    self.report(match,review=review)
- def live(self):
-  s=self.s;m=LiveMatch(s)
+ def live(self,friendly=None):
+  s=self.s;m=friendly if friendly is not None else LiveMatch(s)
   w=tk.Toplevel(self.r);w.title(self.tr('Maç merkezi','Match centre'))
   width=min(1500,max(850,self.r.winfo_width()-35))
   height=min(900,max(550,self.r.winfo_height()-58))
@@ -1378,7 +1415,12 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews,ClubLifeViews):
    m.commit()
    w.destroy()
    self.header()
-   (self.inbox_page if spatial else self.dashboard)()
+   if friendly is not None:
+    self.menu();self.dashboard()
+    from dataclasses import asdict
+    self.report(asdict(m.result()))
+   else:
+    (self.inbox_page if spatial else self.dashboard)()
    self.autosave()
   def drain():
    draw(frames.popleft())
@@ -1474,7 +1516,7 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews,ClubLifeViews):
    ls=m.la if side==0 else m.lb
    bench=[p for p in roster(s['club'],s['year'],m.s) if p['id'] not in m.used and eligible(m.s,p)]
    d=tk.Toplevel(w);d.title(self.tr('Oyuncu değişikliği','Substitution'))
-   remaining=3-(m.team_subs[side] if m.positional else m.subs)
+   remaining=m.sub_limit-(m.team_subs[side] if m.positional else m.subs)
    ttk.Label(d,text=f"{self.tr('Kalan değişiklik','Substitutions remaining')} · {remaining}").pack(pady=(8,0))
    a=ttk.Combobox(d,values=[sub_label(p) for p in ls],state='readonly',width=58)
    b=ttk.Combobox(d,state='readonly',width=58)
@@ -1545,6 +1587,20 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews,ClubLifeViews):
   box.pack()
   box.bind('<<ComboboxSelected>>',lambda _: (self.s.update(currency=currency.get()),self.autosave()))
  def next(self):
+  if hazirlik.active(self.s):
+   prep=self.s['preseason']
+   if str(prep['round']) in prep['fixtures']:
+    match=hazirlik.Friendly(self.s)
+    if self.s.get('match_mode','live')!='quick':
+     return self.live(match)
+    from dataclasses import asdict
+    match.finish()
+    match.commit()
+    self.dashboard();self.report(asdict(match.result()))
+   else:
+    hazirlik.rest(self.s);self.dashboard()
+   self.menu();self.autosave()
+   return
   if self.s['week']>34:
    if messagebox.askyesno('Top Antrenörü',self.tr('Yeni sezona geçilsin mi?','Start next season?')):rollover(self.s);self.header();self.dashboard();self.autosave()
    return
@@ -1570,7 +1626,7 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews,ClubLifeViews):
     messagebox.showerror('Top Antrenörü',self.tr('Kayıt yazılamadı.','Save could not be written.'))
  def load(self):
   folder=user_directory()/'saves'
-  previous=[user_directory().parent/version/'saves' for version in ('v0.9.3','v0.9.2','v0.9.1','v0.9.0','v0.8.9','v0.8.8','v0.8.7','v0.8.6','v0.8.5','v0.8.4','v0.8.3')]
+  previous=[user_directory().parent/version/'saves' for version in ('v0.9.4','v0.9.3','v0.9.2','v0.9.1','v0.9.0','v0.8.9','v0.8.8','v0.8.7','v0.8.6','v0.8.5','v0.8.4','v0.8.3')]
   legacy=Path.home()/'TopAntrenoru'/'saves'
   initial=next((item for item in (folder,*previous,legacy) if item.is_dir()),Path.home())
   path=filedialog.askopenfilename(filetypes=[('JSON','*.json')],initialdir=initial)

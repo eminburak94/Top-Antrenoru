@@ -30,7 +30,7 @@ def fits(p, role):
 
 def eligible(s, p):
     z = state(s, p)
-    return not (z['injury'] or z['ban'])
+    return not (z['injury'] or (z['ban'] and not s.get('_friendly')))
 
 def formation_roles(formation):
     if formation.count('-')==3:
@@ -143,6 +143,7 @@ class MatchResult:
 class Match:
     def __init__(self, s, fixture, seed):
         self.s = s
+        self.sub_limit = 6 if fixture.get('friendly') else 3
         self.a, self.b = fixture['home'], fixture['away']
         self.slots = [select_slots(s, self.a), select_slots(s, self.b)]
         self.style = s['style']
@@ -212,6 +213,9 @@ class Match:
             else:
                 factor = 1 if fits(p,role) else .64
             quality = (.48 * power(self.s, p) + .52 * skill) * factor
+            if 'preseason' in self.s:
+                from hazirlik import cohesion_bonus
+                quality += cohesion_bonus(self.s, self.s['owners'][pid], self.s['formation'])
             values[group].append(quality)
         return {role: sum(scores) / max(1, len(scores)) for role, scores in values.items()} | {'count': len(slots)}
 
@@ -467,7 +471,7 @@ class Match:
         return False
 
     def replace_tired_player(self,side):
-        if self.team_subs[side]>=3:
+        if self.team_subs[side]>=self.sub_limit:
             return False
         outfield=sorted((self.player_condition(pid),role,pid) for role,pid in self.slots[side] if role!='GK')
         if not outfield or outfield[0][0]>=84:
@@ -498,7 +502,7 @@ class Match:
         team=(self.a,self.b)[side]
         slots = self.slots[side]
         incoming = player(self.s,inid)
-        if ((self.team_subs[side] if self.positional else self.subs) >= 3 or self.minute >= 90 or incoming is None or inid in self.used
+        if ((self.team_subs[side] if self.positional else self.subs) >= self.sub_limit or self.minute >= 90 or incoming is None or inid in self.used
                 or self.s['owners'].get(inid) != team or not eligible(self.s, incoming)):
             return False
         for index, (role, pid) in enumerate(slots):
