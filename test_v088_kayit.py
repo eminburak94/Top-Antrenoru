@@ -69,3 +69,70 @@ class SaveSafety(TestCase):
                 self.assertTrue(advance(a))
                 self.assertTrue(advance(b))
                 self.assertEqual(encode(a),encode(b))
+
+
+class SaveDialogSafety(TestCase):
+    def test_corrupt_primary_opens_backup_without_rewriting_either_file(self):
+        import tkinter as tk
+        from arayuz import UI
+        from kariyer import advance
+
+        with TemporaryDirectory() as tmp, patch.dict('os.environ',{'LOCALAPPDATA':tmp}):
+            path=Path(tmp)/'career.json'
+            career=new('GALATASARAY',seed=889,match_model=4)
+            save_game(career,path)
+            expected=encode(career)
+            self.assertTrue(advance(career))
+            save_game(career,path)
+            backup=backup_path(path)
+            healthy=backup.read_bytes()
+            corrupt=b'\xff'
+            path.write_bytes(corrupt)
+            root=tk.Tk()
+            try:
+                ui=UI(root)
+                with patch('arayuz.filedialog.askopenfilename',return_value=str(path)), \
+                     patch('arayuz.messagebox.askyesno',side_effect=[False,True]) as confirm:
+                    ui.load()
+                    self.assertIsNone(ui.s)
+                    ui.load()
+                self.assertEqual(confirm.call_count,2)
+                self.assertEqual(encode(ui.s),expected)
+                self.assertEqual(path.read_bytes(),corrupt)
+                self.assertEqual(backup.read_bytes(),healthy)
+            finally:
+                root.destroy()
+
+    def test_legacy_save_directory_selected_and_autosave_stays_in_current_profile(self):
+        import gzip
+        import json
+        import tkinter as tk
+        from arayuz import UI
+        from kayit import user_directory
+
+        fixture=Path(__file__).with_name('testdata')/'schema3-synthetic.json.gz'
+        with gzip.open(fixture,'rt',encoding='utf8') as stream:
+            raw=next(case['save'] for case in json.load(stream)
+                     if case['source']=='0.8.7' and case['model']==3)
+        with TemporaryDirectory() as tmp, patch.dict('os.environ',{'LOCALAPPDATA':tmp}):
+            current=user_directory()
+            old=current.parent/'v0.8.7'/'saves'
+            old.mkdir(parents=True)
+            original=old/'career.json'
+            raw_bytes=json.dumps(raw,ensure_ascii=False).encode('utf8')
+            original.write_bytes(raw_bytes)
+            root=tk.Tk()
+            try:
+                ui=UI(root)
+                with patch('arayuz.filedialog.askopenfilename',return_value=str(original)) as picker:
+                    ui.load()
+                self.assertEqual(picker.call_args.kwargs['initialdir'],old)
+                self.assertEqual((ui.s['match_model'],ui.s['week']),(3,2))
+                ui.autosave()
+                autosaves=list((current/'autosaves').glob('*.json'))
+                self.assertEqual(len(autosaves),1)
+                self.assertEqual(encode(load_game(autosaves[0])),encode(ui.s))
+                self.assertEqual(list(old.iterdir()),[original])
+                self.assertEqual(original.read_bytes(),raw_bytes)
+            finally:
+                root.destroy()
