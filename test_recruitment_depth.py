@@ -31,6 +31,27 @@ class RecruitmentDepth(TestCase):
         blocked=transfer_quote(s,club,budget+cash,0,ledger['wage_budget']+1)
         self.assertEqual(blocked['issues'],['transfer','cash','wages'])
 
+    def test_scouting_report_age_tracks_elapsed_weeks(self):
+        from ise_alim_ui import RecruitmentViews
+
+        class DummyView(RecruitmentViews):
+            def __init__(self, state):
+                self.s = state
+
+            def tr(self, turkish, english):
+                return english
+
+        view = DummyView(self.s)
+        report = {'year': 2000, 'week': 0, 'confidence': 12}
+        self.s['week'] = 0
+        self.assertIn('0 weeks ago', view.scouting_age(report))
+        self.s['week'] = 1
+        self.assertIn('1 weeks ago', view.scouting_age(report))
+        self.s['week'] = 3
+        self.assertIn('3 weeks ago', view.scouting_age(report))
+        self.s['year'], self.s['week'] = 2001, 0
+        self.assertIn('34 weeks ago', view.scouting_age(report))
+
     def test_scouting_uses_free_colleague_and_roundtrips(self):
         s=self.s
         club=s['club']
