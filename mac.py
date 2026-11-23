@@ -248,7 +248,8 @@ class Match:
         outfield=[pid for role,pid in self.slots[side] if role!='GK']
         if not outfield:
             return
-        tired=sum(self.player_condition(pid) for pid in outfield)/len(outfield)<82
+        condition=sum(self.player_condition(pid) for pid in outfield)/len(outfield)
+        tired=condition<82
         spread=self.score[side]-self.score[1-side]
         if spread<0:
             style,press,tempo='Attack',int(not tired),int(self.minute>=60)
@@ -256,10 +257,41 @@ class Match:
             style,press,tempo='Defend',-1,-1
         else:
             style,press,tempo='Balanced',-int(tired),0
-        for key,value in (('style',style),('press',press),('tempo',tempo)):
+        orders=dict(style=style,press=press,tempo=tempo)
+        if self.team_orders is not None:
+            orders.update(self.adaptive_orders(side,spread,condition))
+        for key,value in orders.items():
             self.instruction(key,value,side)
         if self.minute>=55 and self.minute-self.last_ai_sub[side]>=10 and self.ai_substitution(side):
             self.last_ai_sub[side]=self.minute
+
+    def adaptive_orders(self,side,spread,condition):
+        own=self.slots[side]
+        rival=self.slots[1-side]
+        attackers=[pid for role,pid in own if role!='GK']
+        midfield=[pid for role,pid in own if group_for(role)=='M']
+        backs=[pid for role,pid in own if group_for(role)=='D']
+        opposing_forwards=[pid for role,pid in rival if group_for(role)=='F']
+        wide_roles={'LM','RM','LW','RW','LWB','RWB'}
+        wide=sum(role in wide_roles for role,_ in own)
+
+        def average(players,skill):
+            return sum(self.profiles[pid][skill] for pid in players)/len(players) if players else 10
+
+        chasing=spread<0 and (self.minute>=60 or spread<=-2)
+        protecting=spread>0 and (self.minute>=75 or spread>=2 and self.minute>=65)
+        work=average(attackers,'Work rate')
+        can_press=condition>=80 and work>=10 and len(own)>=len(rival)
+        threatened=average(opposing_forwards,'Pace')>average(backs,'Pace')+1.5
+        technical=len(midfield)>=3 and average(midfield,'Passing')>=12
+        style='Attack' if chasing else 'Defend' if protecting else 'Balanced'
+        return dict(style=style,press=1 if chasing and can_press else -1 if protecting or condition<76 else 0,
+                    tempo=1 if chasing and (condition>=77 or self.minute>=80) else -1 if protecting else 0,
+                    width=1 if wide>=2 and not protecting else -1 if not wide or protecting else 0,
+                    line=-1 if protecting or threatened else int(chasing and can_press),
+                    passing=-1 if technical and (not chasing or condition<80) else int(chasing or protecting),
+                    counter=1 if protecting else -1 if technical and not chasing else 0,
+                    overlap=1 if chasing and can_press and len(backs)>=4 and wide>=2 else -1 if protecting else 0)
 
     def instruction(self,key,value,side=None):
         side=self.human if side is None else side
