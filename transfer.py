@@ -101,6 +101,18 @@ def add_offer(s,p,buyer,fee,terms):
                             fee=fee,year=s['year'],week=s['week'],status='open',**terms))
     return True
 
+def counter_limit(s,offer):
+    if s.get('match_model',0)!=4:
+        return round(offer['fee']*1.22)
+    from mevkiler import fit_level
+    from piyasa_ai import assess
+    buyer=offer['buyer']
+    p=player(s,offer['pid'])
+    needs=assess(s,buyer,roster(buyer,s['year'],s))
+    priority=max((row[0] for row in needs if fit_level(p,row[1])>=2),default=0)
+    premium=.08+min(12,priority)*.015
+    return round(offer['fee']*(1+premium))
+
 def answer_offer(s,index,answer,fee=None):
     offer = s['offers'][index]
     if not s['employed'] or s['club'] != offer['seller'] or offer['status'] != 'open' or not window(s) or offer['year']!=s['year'] or s['week']-offer['week']>2:
@@ -115,10 +127,14 @@ def answer_offer(s,index,answer,fee=None):
     amount = offer['fee'] if answer == 'accept' else fee
     if type(amount) is not int or amount < 0:
         return False,'fee'
-    if amount > round(offer['fee'] * 1.22):
+    if answer=='counter' and amount>counter_limit(s,offer):
         return False,'buyer'
     ok, reason = deal(s,offer['pid'],offer['buyer'],amount,offer['years'],offer['wage'],
                       offer['signing'],offer['role'],seller_consent=True)
     if ok:
         offer['status']='accepted'
+        if s.get('match_model',0)==4:
+            for other in s['offers']:
+                if other['pid']==offer['pid'] and other['status']=='open':
+                    other['status']='expired'
     return ok,reason

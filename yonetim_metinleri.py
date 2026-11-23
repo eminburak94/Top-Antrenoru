@@ -168,6 +168,11 @@ TEXT.update({
  'club_label': ('Kulüp','Club'),
  'job_reason': ('Neden','Reason'),
  'job_required': ('İtibar eşiği','Reputation threshold'),
+ 'job_score': ('Başvuru puanın: {score} · İtibar, galibiyetler ve yakın dönemdeki mali görevden almalar',
+               'Your application score: {score} · Reputation, wins and recent financial dismissals'),
+ 'annual_development_explain': (
+     'Yaş, potansiyel, antrenman ve forma süresi gelişimi etkiler. Sezon performansı gençlerin gelişimini, doğal kondisyon ise yaşa bağlı gerilemeyi etkiler.',
+     'Age, potential, training and playing time shape development. Season performances affect young players’ progress, and natural fitness affects age-related decline.'),
  'job_goal': ('Sıra hedefi','Target rank'),
  'job_confirm': ('{team} için seçilen karar uygulansın mı?','Confirm the selected decision for {team}?'),
  'job_unavailable': ('Bu işlem şu anda yapılamıyor.','This action is currently unavailable.'),
