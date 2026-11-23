@@ -9,6 +9,12 @@ def strength(s, team):
     return sum(best)/11 + min(3,s['finance'][team]['wage_budget']/45000)
 
 def targets(s):
+    if s.get('living_club'):
+        from yasayan_kulup import strength_bonus
+        order=sorted(TEAMS,key=lambda t:(-(strength(s,t)+strength_bonus(s,t)),t))
+        return {team:min(17,rank+(0 if rank<=3 and s['club_reputation'][team]>=68
+                                  else 1 if s['club_reputation'][team]>=55 else 2))
+                for rank,team in enumerate(order,1)}
     order=sorted(TEAMS,key=lambda t:(-strength(s,t),t))
     return {team:min(17,rank+2) for rank,team in enumerate(order,1)}
 
@@ -40,7 +46,10 @@ def evaluate(s, ranking):
         s['board_misses']=0 if rank<=goal else s['board_misses']+1
         if 'manager_state' in s and rank==1:
             s['manager_state']['honours'].append(dict(year=s['year'],team=club))
-        if s['board_misses']>=2 or (rank>goal and s['confidence']<=10):
+        if s.get('living_club'):
+            from yasayan_kulup import season_review
+            season_review(s,rank,goal)
+        elif s['board_misses']>=2 or (rank>goal and s['confidence']<=10):
             if 'manager_state' in s:
                 from is_piyasasi import leave
                 leave(s,'performance')

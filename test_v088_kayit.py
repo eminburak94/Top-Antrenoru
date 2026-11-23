@@ -134,7 +134,7 @@ class SaveDialogSafety(TestCase):
                      if case['source']=='0.8.7' and case['model']==3)
         with TemporaryDirectory() as tmp, patch.dict('os.environ',{'LOCALAPPDATA':tmp}):
             current=user_directory()
-            self.assertEqual(current.name,'v0.9.1')
+            self.assertEqual(current.name,'v0.9.2')
             old=current.parent/'v0.8.7'/'saves'
             old.mkdir(parents=True)
             original=old/'career.json'

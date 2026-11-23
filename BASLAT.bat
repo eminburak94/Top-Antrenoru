@@ -1,6 +1,6 @@
 @echo off
 setlocal
-title Top Antrenoru v0.9.1 Playtest Beta
+title Top Antrenoru v0.9.2 Playtest Beta
 cd /d "%~dp0" || goto :failed
 for %%F in (data.json tarihsel_girisler.json tarihsel_skorlar.json) do (
   if not exist "%%F" (

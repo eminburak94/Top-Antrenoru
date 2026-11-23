@@ -9,6 +9,7 @@ def admin(s,team):
 
 def projection(s,team):
     from personel import payroll as staff_payroll
+    from yasayan_kulup import attendance
     ledger=s['finance'][team]
     rep=s['club_reputation'][team]
     seats=capacity(team)
@@ -23,6 +24,7 @@ def projection(s,team):
         recurring=sum(flows.values())
         gate=scaled(s,'gate',gate)
         tickets=season if s['week']==1 else 0
+    gate*=attendance(s,team)
     income=int(weeks*recurring+homes*gate+tickets)
     staff=staff_payroll(s,team)
     wages=payroll(s,team)

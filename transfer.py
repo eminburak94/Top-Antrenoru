@@ -114,6 +114,9 @@ def deal(s,pid,buyer,fee,years,wage,signing,role='Rotation',seller_consent=False
     source=f'{seller} → ' if seller and s.get('transfer_model') else ''
     message=f"{p['name']} | {source}{buyer} | ${fee:,}" if source else f"{p['name']} → {buyer} | ${fee:,}"
     s['news'].append([s['week'],'Transfer',message])
+    if s.get('living_club'):
+        from yasayan_kulup import transfer as reaction
+        reaction(s,p,buyer,seller,fee)
     return True,'accepted'
 
 
@@ -155,6 +158,9 @@ def loan_deal(s,pid,buyer,fee,share,seller_consent=False):
     register(s,pid,buyer)
     s.setdefault('numbers',{})[pid]=number
     s['news'].append([s['week'],'Kiralama / Loan',f"{p['name']} | {parent} → {buyer} | ${fee:,}"])
+    if s.get('living_club'):
+        from yasayan_kulup import transfer as reaction
+        reaction(s,p,buyer,parent,fee,loan=True)
     return True,'accepted'
 
 

@@ -28,6 +28,9 @@ def begin_spell(s,team):
     s['manager_state']['active_team']=team
     s['manager_state']['spells'].append(dict(team=team,start=clock(s),end=None,reason=None,
                                             stats=blank_stats()))
+    if s.get('living_club'):
+        from yasayan_kulup import begin_spell as board_spell
+        board_spell(s)
 
 
 def vacancy(s,team,reason):
@@ -155,7 +158,7 @@ def weekly(s):
     if s['week'] not in (7,15,23,31):return
     ranking=standings(s)
     team=m['active_team']
-    if team:
+    if team and not s.get('living_club'):
         rank=ranking.index(team)+1
         recent=[match for round_results in s['results'][-4:] for match in round_results
                 if team in (match['home'],match['away'])]

@@ -21,7 +21,7 @@ import is_piyasasi
 SCHEMA_VERSION = 3
 
 def new(club, manager="Menajer", seed=None, unemployed=False, models=True, economy_version=2, match_model=0,
-        transfer_model=False):
+        transfer_model=False,living_club=False):
     if club not in TEAMS:
         raise ValueError('Unknown club')
     s = dict(club=club, manager=manager, year=2000, history=[], week=1,
@@ -38,6 +38,11 @@ def new(club, manager="Menajer", seed=None, unemployed=False, models=True, econo
             for ledger in s['finance'].values():ledger['commercial']=0
         from ekonomi import constrain_budget
         for team in TEAMS:constrain_budget(s,team)
+        if living_club:
+            from menajer import targets
+            from yasayan_kulup import setup
+            setup(s)
+            s['board_targets']=targets(s)
         is_piyasasi.setup(s,unemployed)
     return s
 
@@ -95,6 +100,9 @@ def rollover(s):
     s['news'].append([1, 'Yeni sezon / New season',
                       f'{s["year"]} | Önceki sıra / Previous rank: {rank} | Güven / Confidence: {confidence}%'])
     personel.season_open(s)
+    if s.get('living_club'):
+        from yasayan_kulup import new_season
+        new_season(s)
     season_open(s,rng)
     s['rng_state'] = rng.getstate()
     return True
@@ -155,8 +163,11 @@ def apply_match(s, result, seed, loads=None):
             stats['w' if goals>conceded else 'd' if goals==conceded else 'l']+=1
             opponent = result.away if team == result.home else result.home
             delta = 2 if goals > conceded else -3 if goals < conceded else -1 if s['board_targets'][team] <= 5 else 0
-            s['confidence'] = clamp(s['confidence'] + delta, 0, 100)
-            s['news'].append([s['week'], 'Maç / Match', f'{team} {goals}–{conceded} {opponent} | {s["confidence"]}%'])
+            if not s.get('living_club'):
+                s['confidence'] = clamp(s['confidence'] + delta, 0, 100)
+            s['news'].append([s['week'], 'Maç / Match', f'{team} {goals}–{conceded} {opponent}'])
+            if not s.get('living_club'):
+                s['news'][-1][2]+=f' | {s["confidence"]}%'
     for _,_,pid,event,_ in result.play:
         if event not in ('yellow','red'):
             continue
@@ -201,6 +212,9 @@ def complete_week(s, plans, rng_state, user_match=None, feedback_before=None, ob
     s['results'].append(rows)
     s['week'] += 1
     s['rng_state'] = rng_state
+    if s.get('living_club'):
+        from yasayan_kulup import record_week as club_week
+        club_week(s,rows)
     is_piyasasi.weekly(s)
     if s.get('match_model') and feedback_before is not None:
         from gundem import record

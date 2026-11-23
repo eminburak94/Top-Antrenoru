@@ -505,6 +505,8 @@ def validate_world(s):
                 'Missing transfer model')
     require(all(isinstance(row,list) and len(row)==3 and row[2] in TEAMS for row in s['jobs']),'Invalid job history')
     require(isinstance(s['world_history'],list) and isinstance(s['contract_events'],list),'Invalid world history')
+    if 'living_club' in s:
+        validate_living_club(s)
     for pid,mode in s['sale_status'].items():
         modes=('listed','blocked','loan') if s.get('transfer_model') else ('listed','blocked')
         require(pid in P and mode in modes,'Invalid sale status')
@@ -514,6 +516,42 @@ def validate_world(s):
             require(pid in P and all(team in TEAMS and set(row)==set(FIELDS)
                     and all(integer(v,0) for v in row.values()) for team,row in clubs.items()),'Invalid statistical row')
     return s
+
+
+def validate_living_club(s):
+    from yasayan_kulup import PRESS_KINDS
+    life=s['living_club']
+    require(isinstance(life,dict) and 'manager_state' in s,'Invalid living club')
+    fans=life.get('fans')
+    require(isinstance(fans,dict) and set(fans)==set(TEAMS),'Invalid supporter data')
+    for row in fans.values():
+        require(isinstance(row,list) and len(row)==3 and integer(row[0],0,100)
+                and integer(row[1],-5,5) and integer(row[2],-10,10),'Invalid supporter record')
+    board=life.get('board')
+    require(isinstance(board,dict) and board.get('club')==s['club']
+            and isinstance(board.get('form'),list) and len(board['form'])<=6
+            and all(type(p) is int and p in (0,1,3) for p in board['form'])
+            and integer(board.get('sport'),0,8) and integer(board.get('fiscal'),0,8)
+            and integer(board.get('risk'),0,100) and integer(board.get('meeting'),0,34)
+            and type(board.get('used_recovery')) is bool,'Invalid board review')
+    for key in ('promise','recovery'):
+        if key in life:
+            row=life[key]
+            require(isinstance(row,list) and len(row)==2 and integer(row[0],1,3)
+                    and integer(row[1],0,(3-row[0])*3),'Invalid club commitment')
+    if 'question' in life:
+        row=life['question']
+        require(isinstance(row,list) and len(row)==5 and row[0]==s['year'] and integer(row[1],1,34)
+                and row[2] in ('derby','poor','streak','transfer') and row[3]==s['club']
+                and isinstance(row[4],str),'Invalid press question')
+    briefs=life.get('briefs')
+    require(isinstance(briefs,list) and len(briefs)<=30,'Invalid press archive')
+    for row in briefs:
+        require(isinstance(row,list) and len(row)==6 and integer(row[0],2000,s['year'])
+                and integer(row[1],1,34) and row[2] in PRESS_KINDS and row[3] in TEAMS
+                and all(isinstance(v,str) for v in row[4:]),'Invalid press article')
+        if row[2]=='budget':
+            require(len(row[5])<=8 and row[5].isdecimal(),'Invalid budget report')
 
 def decode(text):
     try:
@@ -572,7 +610,7 @@ def load_game(path):
 
 def user_directory():
     local=os.environ.get('LOCALAPPDATA')
-    return (Path(local) if local else Path.home()) / 'TopAntrenoru' / 'v0.9.1'
+    return (Path(local) if local else Path.home()) / 'TopAntrenoru' / 'v0.9.2'
 
 
 def autosave(s, directory=None):

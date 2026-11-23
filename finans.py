@@ -33,9 +33,10 @@ def flow(ledger,key,amount,expense=False):
     ledger['cash']+=-amount if expense else amount
 
 def gate(s,home,participants):
+    from yasayan_kulup import attendance
     ledger=s['finance'][home]
     crowd=capacity(home)*(.40+s['club_reputation'][home]/180)
-    receipts=scaled(s,'gate',crowd*4.75*min(11,participants)/11*cycle(s['year']))
+    receipts=scaled(s,'gate',crowd*4.75*min(11,participants)/11*cycle(s['year'])*attendance(s,home))
     flow(ledger,'tickets',receipts)
 
 def prizes(s):
