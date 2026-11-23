@@ -392,6 +392,15 @@ class Match:
                 return True
         return False
 
+    def replacement_role(self,side,role,incoming):
+        if not isinstance(self.pitch,CalibratedPitch):
+            return role
+        if incoming['pos']=='GK':
+            if role=='GK' or not any(pos=='GK' for pos,_ in self.slots[side]):
+                return 'GK'
+            return None
+        return None if role=='GK' else role
+
     def substitute_side(self,side,outid,inid):
         team=(self.a,self.b)[side]
         slots = self.slots[side]
@@ -402,12 +411,15 @@ class Match:
         for index, (role, pid) in enumerate(slots):
             if pid != outid:
                 continue
+            replacement=self.replacement_role(side,role,incoming)
+            if replacement is None:
+                return False
             foreigners = sum(not is_domestic(player(self.s,key)) for _, key in slots if key != outid)
             if foreigners + (not is_domestic(incoming)) > self.s['cap']:
                 return False
             if isinstance(self.pitch, CalibratedPitch) and not self.pitch.settle_substitution(side, outid):
                 return False
-            slots[index] = (role, inid)
+            slots[index] = (replacement, inid)
             self.used.add(inid)
             self.team_subs[side]+=1
             if side==self.human or not self.positional:self.subs+=1

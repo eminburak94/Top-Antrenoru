@@ -39,6 +39,20 @@ class CalibratedPitch(RulesPitch):
         super().__init__(match, seed)
         self.corner_phase = None
 
+    def align(self):
+        # Preserve coordinates of surviving players after a dismissal.
+        previous=self.anchor[:]
+        super().align()
+        for side,slots in enumerate(self.m.slots):
+            if len(slots)==11 or self.anchor[side] is previous[side]:
+                continue
+            for role,pid in slots:
+                if pid in previous[side]:
+                    self.anchor[side][pid]=previous[side][pid]
+                elif role=='GK':
+                    point=(.055 if side==0 else .945,.5)
+                    self.anchor[side][pid]=self.xy[pid]=point
+
     def card(self, side, offender, level):
         # A deferred second caution may already have sent this player off.
         if offender in self.anchor[side]:

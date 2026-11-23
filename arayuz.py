@@ -1200,14 +1200,32 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews):
     actual=positions.get(pid,p['pos'])
     label=detail_position(actual,self.lang) if actual in POSITION_NAMES else position_code(actual,self.lang)
     return f"{label} · {p['name']} · {self.tr('Kond.','Fit.')} {condition}% · {self.tr('Puan','Rating')} {ratings.get(pid,'—')}"
-   pause();ls=m.la if s['club']==m.a else m.lb;bench=[p for p in roster(s['club'],s['year'],m.s) if p['id'] not in m.used and not state(m.s,p)['injury'] and not state(m.s,p)['ban']];d=tk.Toplevel(w);d.title(self.tr('Oyuncu değişikliği','Substitution'));a=ttk.Combobox(d,values=[sub_label(p) for p in ls],state='readonly',width=58);b=ttk.Combobox(d,values=[sub_label(p) for p in bench],state='readonly',width=58);a.pack(padx=12,pady=8);b.pack(padx=12,pady=8)
+   pause()
+   side=int(s['club']==m.b)
+   ls=m.la if side==0 else m.lb
+   bench=[p for p in roster(s['club'],s['year'],m.s) if p['id'] not in m.used and eligible(m.s,p)]
+   d=tk.Toplevel(w);d.title(self.tr('Oyuncu değişikliği','Substitution'))
+   a=ttk.Combobox(d,values=[sub_label(p) for p in ls],state='readonly',width=58)
+   b=ttk.Combobox(d,state='readonly',width=58)
+   a.pack(padx=12,pady=8);b.pack(padx=12,pady=8)
+   candidates=[]
+   def available_replacements(_=None):
+    candidates.clear()
+    if a.current()>=0:
+     role=positions[ls[a.current()]['id']]
+     candidates.extend(p for p in bench if m.replacement_role(side,role,p) is not None)
+    b.configure(values=[sub_label(p) for p in candidates])
+    b.set('')
+   a.bind('<<ComboboxSelected>>',available_replacements)
+   if ls:a.current(0)
+   available_replacements()
    d.transient(w);d.grab_set()
    def close():
     d.destroy();w.grab_set()
    d.protocol('WM_DELETE_WINDOW',close)
    d.bind('<Escape>',lambda _:close())
    def apply():
-    if a.current()>=0 and b.current()>=0 and m.substitute(ls[a.current()]['id'],bench[b.current()]['id']):
+    if a.current()>=0 and b.current()>=0 and m.substitute(ls[a.current()]['id'],candidates[b.current()]['id']):
      frames.clear()
      close()
      if m.capture and m.positional:
