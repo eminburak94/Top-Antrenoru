@@ -96,12 +96,17 @@ def recruit(s):
         paid=0
         borrowed=False
         elite=s['club_reputation'][team]>=67
-        for _,role,baseline,shortage,aging in initial:
+        attempted_roles=set()
+        for _ in initial:
             squad=roster(team,s['year'],s)
             if len(squad)>=24:break
-            needs={n[1]:n for n in assess(s,team,squad)}
-            if role not in needs:continue
-            _,_,baseline,shortage,aging=needs[role]
+            # Re-rank priorities after every successful move.  Keep each role
+            # to one attempt per recruitment pass, including pending offers.
+            remaining=[need for need in assess(s,team,squad)
+                       if need[1] not in attempted_roles]
+            if not remaining:break
+            _,role,baseline,shortage,aging=remaining[0]
+            attempted_roles.add(role)
             ledger=s['finance'][team]
             budget=min(ledger['cash'],ledger['transfer_budget'],plan['closing']-plan['reserve'])
             if budget<=0:break
