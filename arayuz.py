@@ -36,9 +36,9 @@ from kayit import user_directory
 
 class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews):
  def __init__(self,r):
-  self.r=r;self.s=None;self.lang='TR';r.title('Top Antrenörü v0.8.8');r.geometry('1200x760');r.minsize(960,600);r.configure(bg=THEME['base'])
+  self.r=r;self.s=None;self.lang='TR';r.title('Top Antrenörü v0.8.9 Playtest Beta');r.geometry('1200x760');r.minsize(960,600);r.configure(bg=THEME['base'])
   install(r)
-  self.head=tk.Label(r,bg=THEME['base'],fg=THEME['accent'],font=(FONT,19,'bold'),pady=11);self.head.pack(fill='x');self.nav=ttk.Frame(r,padding=8);self.nav.pack(fill='x');self.body=ttk.Frame(r,padding=16);self.body.pack(fill='both',expand=True);self.status=tk.Label(r,bg=THEME['base'],fg=THEME['muted'],anchor='w',padx=16,pady=8,text='TOP ANTRENÖRÜ  |  2000–2001  |  v0.8.8');self.status.pack(side='bottom',fill='x');self.start()
+  self.head=tk.Label(r,bg=THEME['base'],fg=THEME['accent'],font=(FONT,19,'bold'),pady=11);self.head.pack(fill='x');self.nav=ttk.Frame(r,padding=8);self.nav.pack(fill='x');self.body=ttk.Frame(r,padding=16);self.body.pack(fill='both',expand=True);self.status=tk.Label(r,bg=THEME['base'],fg=THEME['muted'],anchor='w',padx=16,pady=8,text='TOP ANTRENÖRÜ  |  2000–2001  |  v0.8.9 Playtest Beta');self.status.pack(side='bottom',fill='x');self.start()
  def tr(self,a,b):return a if self.lang=='TR' else b
  def management_text(self,key,**values):
   return self.tr(*TEXT[key]).format(**values)
@@ -46,7 +46,24 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews):
   for x in self.body.winfo_children():x.destroy()
  def button(self,parent,a,b,cmd):return ttk.Button(parent,text=self.tr(a,b),command=cmd)
  def start(self):
-  self.clear();self.head.config(text='TOP ANTRENÖRÜ  /  2000');v=tk.StringVar(value='GALATASARAY');name=tk.StringVar();unemployed=tk.BooleanVar();outer=ttk.Frame(self.body);outer.pack(expand=True,fill='both');left=tk.Frame(outer,bg=THEME['hero'],padx=32,pady=30);left.pack(side='left',fill='both',expand=True,padx=(0,16));tk.Label(left,text='2000 / 01',font=(FONT,36,'bold'),bg=THEME['hero'],fg=THEME['accent']).pack(anchor='w');tk.Label(left,text=self.tr('Futbolun geçmişine dön.\nKendi tarihini yaz.','Return to football history.\nWrite your own.'),justify='left',font=(FONT,19),bg=THEME['hero'],fg=THEME['text']).pack(anchor='w',pady=20);c=tk.Canvas(left,width=330,height=210,bg=THEME['field'],highlightthickness=0);c.pack(anchor='w',fill='x');c.create_rectangle(12,12,318,198,outline=THEME['line'],width=2);c.create_line(165,12,165,198,fill=THEME['line'],width=2);c.create_oval(130,70,200,140,outline=THEME['line'],width=2);c.create_rectangle(12,55,65,155,outline=THEME['line']);c.create_rectangle(265,55,318,155,outline=THEME['line']);right=ttk.Frame(outer,padding=24);right.pack(side='right',fill='y');ttk.Label(right,text=self.tr('Yeni kariyer','New career'),font=(FONT,21,'bold')).pack(anchor='w',pady=(20,22));ttk.Label(right,text=self.tr('Menajer adı','Manager name')).pack(anchor='w');e=ttk.Entry(right,textvariable=name,width=34);e.pack(fill='x',pady=(5,18));ttk.Label(right,text=self.tr('Kulübünü seç','Choose your club')).pack(anchor='w');ttk.Combobox(right,textvariable=v,values=TEAMS,state='readonly',width=32).pack(fill='x',pady=(5,22));ttk.Checkbutton(right,text=self.management_text('start_unemployed'),variable=unemployed).pack(anchor='w');defstart=lambda:self.begin(dict(new(v.get(),name.get().strip() or self.tr('Menajer','Manager'),unemployed=unemployed.get(),match_model=4),lang=self.lang));ttk.Button(right,text=self.tr('Kariyeri başlat','Start career'),style='Accent.TButton',command=defstart).pack(fill='x',pady=5);self.button(right,'Kayıt yükle','Load career',self.load).pack(fill='x',pady=5);ttk.Button(right,text='TR / EN',command=lambda:(self.toggle(),self.start())).pack(fill='x',pady=5);e.bind('<Return>',lambda _:defstart());e.focus_set()
+  self.clear();self.head.config(text='TOP ANTRENÖRÜ  /  2000');v=tk.StringVar(value='GALATASARAY');name=tk.StringVar();unemployed=tk.BooleanVar();outer=ttk.Frame(self.body);outer.pack(expand=True,fill='both');left=tk.Frame(outer,bg=THEME['hero'],padx=32,pady=30);left.pack(side='left',fill='both',expand=True,padx=(0,16));tk.Label(left,text='2000 / 01',font=(FONT,36,'bold'),bg=THEME['hero'],fg=THEME['accent']).pack(anchor='w');tk.Label(left,text=self.tr('Futbolun geçmişine dön.\nKendi tarihini yaz.','Return to football history.\nWrite your own.'),justify='left',font=(FONT,19),bg=THEME['hero'],fg=THEME['text']).pack(anchor='w',pady=20);c=tk.Canvas(left,width=330,height=210,bg=THEME['field'],highlightthickness=0);c.pack(anchor='w',fill='x');c.create_rectangle(12,12,318,198,outline=THEME['line'],width=2);c.create_line(165,12,165,198,fill=THEME['line'],width=2);c.create_oval(130,70,200,140,outline=THEME['line'],width=2);c.create_rectangle(12,55,65,155,outline=THEME['line']);c.create_rectangle(265,55,318,155,outline=THEME['line']);right=ttk.Frame(outer,padding=24);right.pack(side='right',fill='y');ttk.Label(right,text=self.tr('Yeni kariyer','New career'),font=(FONT,21,'bold')).pack(anchor='w',pady=(20,22));ttk.Label(right,text=self.tr('Menajer adı','Manager name')).pack(anchor='w');e=ttk.Entry(right,textvariable=name,width=34);e.pack(fill='x',pady=(5,18));ttk.Label(right,text=self.tr('Kulübünü seç','Choose your club')).pack(anchor='w');ttk.Combobox(right,textvariable=v,values=TEAMS,state='readonly',width=32).pack(fill='x',pady=(5,22));ttk.Checkbutton(right,text=self.management_text('start_unemployed'),variable=unemployed).pack(anchor='w');defstart=lambda:self.begin(dict(new(v.get(),name.get().strip() or self.tr('Menajer','Manager'),unemployed=unemployed.get(),match_model=4),lang=self.lang));ttk.Button(right,text=self.tr('Kariyeri başlat','Start career'),style='Accent.TButton',command=defstart).pack(fill='x',pady=5);self.button(right,'Kayıt yükle','Load career',self.load).pack(fill='x',pady=5);links=ttk.Frame(right);links.pack(fill='x',pady=5);ttk.Button(links,text='TR / EN',command=lambda:(self.toggle(),self.start())).pack(side='left');self.button(links,'Emeği Geçenler','Credits',self.credits).pack(side='left',padx=(6,0));e.bind('<Return>',lambda _:defstart());e.focus_set()
+ def credits(self):
+  self.clear()
+  title=self.tr('Emeği Geçenler','Credits')
+  self.head.configure(text=title)
+  card=ttk.Frame(self.body,padding=16,style='Desk.TFrame')
+  card.pack(fill='x',pady=6)
+  contributors=(
+   ('Emin Burak Öncel','Proje Sahibi ve Oyun Tasarımı','Project Owner and Game Design'),
+   ('OpenAI Codex','Yapay Zekâ Geliştirme','AI Development'),
+   ('Atlas (ChatGPT)','Planlama ve Koordinasyon','Planning and Coordination'),
+   ('Claude','Kod İnceleme','Code Review'),
+   ('Qwen3 + OpenCode','Yerel Ön Denetim','Local Pre-audit'),
+  )
+  for name,tr,en in contributors:
+   ttk.Label(card,text=name,style='DeskTitle.TLabel').pack(anchor='w')
+   ttk.Label(card,text=self.tr(tr,en),style='DeskBody.TLabel').pack(anchor='w',pady=(0,8))
+  self.button(self.body,'Ana menüye dön','Back to main menu',self.start).pack(anchor='w',pady=8)
  def toggle(self):self.lang='EN' if self.lang=='TR' else 'TR'
  def begin(self,s):s.setdefault('manager','Menajer');s.setdefault('year',2000);s.setdefault('history',[]);self.s=prepare(s);self.lang=s.get('lang',self.lang);self.menu();self.dashboard()
  def menu(self):
@@ -1280,7 +1297,7 @@ class UI(SetPieceViews,RecruitmentViews,StaffViews,CareerViews):
     messagebox.showerror('Top Antrenörü',self.tr('Kayıt yazılamadı.','Save could not be written.'))
  def load(self):
   folder=user_directory()/'saves'
-  previous=[user_directory().parent/version/'saves' for version in ('v0.8.7','v0.8.6','v0.8.5','v0.8.4','v0.8.3')]
+  previous=[user_directory().parent/version/'saves' for version in ('v0.8.8','v0.8.7','v0.8.6','v0.8.5','v0.8.4','v0.8.3')]
   legacy=Path.home()/'TopAntrenoru'/'saves'
   initial=next((item for item in (folder,*previous,legacy) if item.is_dir()),Path.home())
   path=filedialog.askopenfilename(filetypes=[('JSON','*.json')],initialdir=initial)

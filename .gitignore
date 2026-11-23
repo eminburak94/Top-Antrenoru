@@ -19,6 +19,7 @@ build/
 dist/
 *TESTER ALFA/
 *TESTER BETA/
+*PLAYTEST BETA/
 yedek_v*/
 *.exe
 *.dll

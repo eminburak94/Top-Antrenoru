@@ -205,7 +205,7 @@ class Regression(unittest.TestCase):
         try:
             ui = UI(root)
             root.update()
-            self.assertIn('v0.8.8', root.title())
+            self.assertIn('v0.8.9 Playtest Beta', root.title())
             ui.begin(k.new(CLUBS[0], seed=16))
             ui.autosave = lambda: None
             for screen in (ui.dashboard, ui.career_page, ui.squad, ui.table, ui.fixtures,

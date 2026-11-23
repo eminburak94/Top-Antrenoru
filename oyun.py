@@ -12,7 +12,7 @@ def check_package(output):
     from unittest.mock import patch
 
     from arayuz import UI
-    from kayit import decode, encode
+    from kayit import decode, encode, user_directory
     from sozlesme import asking_terms
     from transfer import asking_fee, deal
     from veritabani import HISTORICAL, P, TEAMS, all_players, available, roster
@@ -30,11 +30,18 @@ def check_package(output):
         find(window,ttk.Button,lambda w:w.cget('text')==text).invoke()
 
     with TemporaryDirectory() as folder, patch.dict(os.environ,{'LOCALAPPDATA':folder}):
-        path=Path(folder)/'probe.json'
+        assert user_directory()==Path(folder)/'TopAntrenoru'/'v0.8.9'
+        path=user_directory()/'saves'/'probe.json'
         root=tk.Tk()
         try:
             ui=UI(root)
+            click(root,'Emeği Geçenler')
+            assert find(root,ttk.Label,lambda w:w.cget('text')=='Emin Burak Öncel')
+            click(root,'Ana menüye dön')
             click(root,'TR / EN')
+            click(root,'Credits')
+            assert find(root,ttk.Label,lambda w:w.cget('text')=='Local Pre-audit')
+            click(root,'Back to main menu')
             find(root,ttk.Combobox).set('FENERBAHÇE')
             click(root,'Start career')
             s=ui.s
@@ -104,7 +111,8 @@ def check_package(output):
             result=dict(version=version,frozen=bool(getattr(sys,'frozen',False)),
                         clubs=len(TEAMS),players=len(P)+len(HISTORICAL),club=s['club'],
                         match_model=s['match_model'],formation=s['formation'],transfer=pid,
-                        canvas_items=canvas_items,week=s['week'],played=len(s['results'][0]),reload=True)
+                        canvas_items=canvas_items,week=s['week'],played=len(s['results'][0]),reload=True,
+                        credits=True,save_directory=user_directory().name)
             output.write_text(json.dumps(result,ensure_ascii=False),encoding='utf-8')
         finally:
             root.destroy()

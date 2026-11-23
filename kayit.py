@@ -535,7 +535,7 @@ def load_game(path):
 
 def user_directory():
     local=os.environ.get('LOCALAPPDATA')
-    return (Path(local) if local else Path.home()) / 'TopAntrenoru' / 'v0.8.8'
+    return (Path(local) if local else Path.home()) / 'TopAntrenoru' / 'v0.8.9'
 
 
 def autosave(s, directory=None):
