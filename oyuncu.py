@@ -162,6 +162,13 @@ def prepare_player(s,p,team,fitness_bonus=None,programme=None,rehab_staff=None):
             not s.get('workload_model') or not z['injury']):
         z['training_weeks'] = z.get('training_weeks',0) + 1
         z['condition'] = max(40, z['condition'] - 4)
+    # AI youth training: one credit award per player and season week.
+    if (not user_club and not plan and isinstance(age, int) and age < 25
+            and not z['injury'] and not z.get('return_weeks')):
+        stamp = f"{s['year']}:{s['week']}"
+        if z.get('ai_training_stamp') != stamp:
+            z['training_weeks'] = round(z.get('training_weeks', 0) + .75, 3)
+            z['ai_training_stamp'] = stamp
     if s.get('workload_model'):
         z['condition'] = min(z['condition'], recovery_ceiling(z, rehab_staff))
     return observation
