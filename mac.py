@@ -74,6 +74,13 @@ def select_slots(s, team, use_manual=True):
             return slots
     available = [p for p in roster(team, s['year'], s) if eligible(s, p)]
     scores = {p['id']: power(s, p) for p in available}
+    from oyuncu import age_at
+    if not (team == s['club'] and s['employed']):
+        for p in available:
+            z = state(s, p)
+            age = age_at(p, s['year'], s['week'])
+            if isinstance(age, int) and age < 23 and z['condition'] >= 75 and z['potential'] > z['ability']:
+                scores[p['id']] += min(0.75, (z['potential'] - z['ability']) * 0.15)
     preferred = set(s['selected']) if team == s['club'] and s['employed'] else set()
     foreign = 0
     slots = []
