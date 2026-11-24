@@ -45,6 +45,19 @@ def starting_cover(s, squad):
     return cover
 
 
+def sale_preserves_cover(s, squad, pid):
+    """Do not reduce the number of distinct usable starting players."""
+    remaining=[p for p in squad if p['id']!=pid]
+    if len(remaining)==len(squad):return False
+    # Also protect long-term coverage when a player is temporarily injured.
+    healthy_view=dict(s,transfer_model=False)
+    for view in (s,healthy_view) if s.get('transfer_model') else (s,):
+        before=sum(map(len,starting_cover(view,squad).values()))
+        after=sum(map(len,starting_cover(view,remaining).values()))
+        if after<before:return False
+    return True
+
+
 def assess(s, team, squad):
     depth=Counter(group_for(p['pos']) for p in squad)
     competitive=19-s['board_targets'][team]
@@ -163,6 +176,8 @@ def recruit(s):
                     score+=quality*.14 if elite else upside*.42-cost/max(80000,budget)*.9
                 options.append((score,pid,p,owner,fee,terms))
             for _,pid,p,owner,fee,terms in sorted(options,reverse=True):
+                if owner and not (s['employed'] and owner==s['club']):
+                    if not sale_preserves_cover(s,roster(owner,s['year'],s),pid):continue
                 if s['employed'] and owner==s['club']:
                     ok=add_offer(s,p,team,fee,terms)
                 else:
