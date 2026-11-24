@@ -19,23 +19,43 @@ def known_age(s,p,fallback):
     return age if isinstance(age,int) else fallback
 
 
+def starting_cover(s, squad):
+    # Maximum-cardinality matching: each player can fill only one slot.
+    players={p['id']:p for p in squad
+             if not s.get('transfer_model') or state(s,p)['injury']<3}
+    candidates={role:sorted((p for p in players.values() if fit_level(p,role)>=2),
+                            key=lambda p:(-skill(s,p,role),p['id']))
+                for role in POSITIONS}
+    assigned={}
+    def place(slot, seen):
+        for p in candidates[FORMATION[slot]]:
+            pid=p['id']
+            if pid in seen:continue
+            seen.add(pid)
+            if pid not in assigned or place(assigned[pid],seen):
+                assigned[pid]=slot
+                return True
+        return False
+    for slot in sorted(range(len(FORMATION)),
+                       key=lambda i:(len(candidates[FORMATION[i]]),i)):
+        place(slot,set())
+    cover={role:[] for role in POSITIONS}
+    for pid,slot in assigned.items():
+        cover[FORMATION[slot]].append(players[pid])
+    return cover
+
+
 def assess(s, team, squad):
     depth=Counter(group_for(p['pos']) for p in squad)
     competitive=19-s['board_targets'][team]
     needs=[]
+    cover=starting_cover(s,squad)
     for role in POSITIONS:
         group=group_for(role)
-        alternatives=[p for p in squad if fit_level(p,role)>=2]
-        options=sorted(alternatives,key=lambda p:(-skill(s,p,role),p['id']))
         slots=FORMATION.count(role)
-        if s.get('transfer_model'):
-            options.sort(key=lambda p:(state(s,p)['injury']>=3,-skill(s,p,role),p['id']))
-            available_count=sum(state(s,p)['injury']<3 for p in options)
-        else:
-            available_count=len(options)
-        shortage=max(0,slots-available_count)
+        core=sorted(cover[role],key=lambda p:(-skill(s,p,role),p['id']))
+        shortage=max(0,slots-len(core))
         thin=max(0,DEPTH[group]-depth[group])
-        core=options[:slots]
         aging=sum(known_age(s,p,0)>=32 for p in core)
         expiring=sum(state(s,p)['contract']<=s['year']+1 for p in core)
         quality=skill(s,core[-1],role) if core else 0
