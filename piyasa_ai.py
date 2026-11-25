@@ -205,10 +205,18 @@ def borrow_cover(s,team,role,market,plan):
             continue
         if not loan_ready(s,p):
             continue
+        if not sale_preserves_cover(s, roster(owner,s['year'],s), pid):
+            continue
         fee=loan_fee(s,p)
         wage=state(s,p)['wage']
         if can_commit(s,team,fee,wage//2,forecast=plan):
-            options.append((skill(s,p,role)+.4*form,pid,p,owner,fee,wage))
+            bonus = 0.0
+            if age < 23:
+                potential = state(s,p)['potential']
+                ability = state(s,p)['ability']
+                bonus = min(0.75, max(0.0, potential - ability) * 0.10)
+            score = skill(s,p,role) + .4*form + bonus
+            options.append((score,pid,p,owner,fee,wage))
     for _,pid,p,owner,fee,wage in sorted(options,reverse=True):
         if s['employed'] and owner==s['club']:
             ok=add_offer(s,p,team,fee,dict(years=1,wage=min(50000,max(100,wage)),
